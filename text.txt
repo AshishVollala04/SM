@@ -1,0 +1,1377 @@
+Act as a senior frontend architect, Vanilla JavaScript engineer, QA engineer, security reviewer, and school ERP domain expert.
+
+Review the complete FutureSchool application:
+
+- index.html
+- style.css
+- script.js
+
+The application is a frontend-only prototype using:
+
+- HTML
+- CSS
+- Vanilla JavaScript
+- localStorage
+
+The application already contains Admin, Teacher, Parent, and Student portals.
+
+==================================================
+MAIN OBJECTIVE
+==================================================
+
+Stabilize the existing FutureSchool application.
+
+Do not add unrelated features.
+
+Do not redesign the entire UI.
+
+Do not replace the application with a smaller project.
+
+Do not remove working modules.
+
+Fix:
+
+- Role separation
+- Wrong dashboard mappings
+- Incorrect page visibility
+- Authorization gaps
+- Data-model inconsistencies
+- Storage-key conflicts
+- Attendance inconsistencies
+- Marks workflow problems
+- Report-card problems
+- Fee and payment inconsistencies
+- Hall-ticket workflow
+- Hardcoded fake metrics
+- Legacy compatibility code affecting active workflows
+- Runtime errors
+- Missing DOM-element references
+- Incorrect empty states
+- Incorrect prototype wording
+
+The immediate goal is:
+
+1. Every login opens the correct dashboard.
+2. Every role sees only permitted pages and controls.
+3. Core workflows work after refresh.
+4. No page is blank.
+5. No data from another user is exposed.
+6. No action succeeds without authorization.
+7. Existing functionality is preserved.
+
+==================================================
+CURRENT IMPLEMENTED MODULES
+==================================================
+
+Preserve all existing modules.
+
+Admin:
+
+- Admin Dashboard
+- Admissions
+- Students Directory
+- Teachers Directory
+- Parents Directory
+- User Accounts
+- Class Management
+- Subject Allocation
+- Academic Years
+- Student Promotion
+- Certificates
+- Staff Attendance
+- School Calendar
+- School Settings
+- Notifications
+- Fee Management
+- Payment Ledger
+- Fee Defaulters
+- Complaints
+- Marks Overview
+- Report Cards
+- Demo QA
+
+Teacher:
+
+- Teacher Dashboard
+- My Students
+- Student Profiles
+- Attendance Entry
+- Homework Management
+- Marks Entry
+- Marks Verification
+- Quiz Creation
+- Parent Messaging
+- Complaints
+- Notifications
+- Teacher Self-Attendance
+- Lesson Planner
+- Question Paper Generator
+
+Parent:
+
+- Parent Dashboard
+- Multiple-Child Selection
+- Child Attendance
+- Child Homework
+- Child Marks
+- Child Report Cards
+- Fees and Payments
+- Payment History
+- Meeting Requests
+- Parent Messages
+- Complaints
+- Notices
+- Transport
+- Study Materials
+
+Student:
+
+- Student Dashboard
+- Attendance History
+- Homework and Submission
+- Published Marks
+- Published Report Card
+- Quiz Zone
+- Digital Library
+- AI Tutor Demo
+- Timetable
+- Exams and Notices
+- Study Materials
+- Transport
+- Hall Ticket
+
+==================================================
+PHASE 1: LOGIN AND PAGE MAPPING
+==================================================
+
+Audit:
+
+- login-form submit handler
+- roleProfiles
+- roleNavConfig
+- renderSidebarNavigation()
+- applyRoleView()
+- showPage()
+- refreshCurrentPageView()
+- goHome()
+- logout()
+
+Required dashboard mapping:
+
+Admin:
+admin → page-admin-dashboard
+
+Teacher:
+teacher → page-teacher
+
+Parent:
+parent → page-parent
+
+Student:
+student → page-student
+
+Before activating a page:
+
+document.querySelectorAll(".page").forEach(
+    page => page.classList.remove("active-page")
+);
+
+Then activate exactly one target page.
+
+After activation, verify:
+
+document.querySelectorAll(".page.active-page").length === 1
+
+If the target page does not exist:
+
+- Log a clear error.
+- Do not leave the previous role’s page visible.
+- Return safely.
+
+When logging out:
+
+- Remove active-page from all pages.
+- Hide all role-specific subviews.
+- Clear currentRole, currentAccount, and currentAccess.
+- Return to the login page.
+
+Do not allow the previously logged-in role’s dashboard to remain visible.
+
+==================================================
+PHASE 2: STRICT ROLE-SPECIFIC VIEW SEPARATION
+==================================================
+
+Shared pages currently contain multiple role-specific subviews.
+
+Examples:
+
+Attendance:
+
+- teacher-attendance-view
+- admin-attendance-view
+- student-attendance-view
+- parent-attendance-view
+
+Homework:
+
+- teacher-homework-view
+- admin-homework-view
+- student-homework-view
+- parent-homework-view
+
+Marks:
+
+- teacher-marks-view
+- admin-marks-view
+- student-marks-view
+- parent-marks-view
+
+Fees:
+
+- admin-fees-view
+- parent-fees-view
+
+Quiz:
+
+- teacher-quiz-view
+- student-quiz-view
+
+Reports:
+
+- report-manager
+- report-reader
+
+Create a reliable helper:
+
+function hideAllRoleSubviews() {
+    const ids = [
+        "teacher-attendance-view",
+        "admin-attendance-view",
+        "student-attendance-view",
+        "parent-attendance-view",
+
+        "teacher-homework-view",
+        "admin-homework-view",
+        "student-homework-view",
+        "parent-homework-view",
+
+        "teacher-marks-view",
+        "admin-marks-view",
+        "student-marks-view",
+        "parent-marks-view",
+
+        "admin-fees-view",
+        "parent-fees-view",
+
+        "teacher-quiz-view",
+        "student-quiz-view",
+
+        "report-manager",
+        "report-reader"
+    ];
+
+    ids.forEach(id => {
+        document
+            .getElementById(id)
+            ?.classList.add("hidden");
+    });
+}
+
+Every time a shared page opens:
+
+1. Hide every role-specific subview.
+2. Show exactly one valid subview.
+3. Render only the selected role’s data.
+4. Do not depend on visibility state from a previous login.
+
+Student must never see:
+
+- Attendance Entry
+- Mark All Present
+- Save Attendance
+- Correction Reason
+- Marks Entry
+- Save Draft
+- Submit for Verification
+- Publish Marks
+- Report Card Generator
+- Student selector
+- Fee administration
+- Notification creation
+- Quiz creation
+- Teacher tools
+- Admin actions
+
+Parent must never see:
+
+- Teacher Attendance Entry
+- Marks Entry
+- Report Generator
+- Admin Fee Creation
+- School-wide records
+- Other families’ data
+
+Teacher must never see:
+
+- School-wide Admin controls
+- Unassigned classes
+- Unallocated subjects
+- Other teachers’ quizzes
+- Other teachers’ private conversations
+- Fee administration
+
+==================================================
+PHASE 3: STUDENT PORTAL
+==================================================
+
+Student Dashboard:
+
+Replace hardcoded values:
+
+- Study Streak: 12 days
+- Class Rank: #08 of 42
+
+Use calculated values only if real logic exists.
+
+Otherwise show:
+
+Not Available
+
+Student dashboard should prioritize:
+
+- Attendance Rate
+- Today’s Attendance
+- Active Homework
+- Latest Published Marks
+- Upcoming Exam
+- Hall Ticket Status
+- School Notices
+- Class Teacher
+
+Student Attendance:
+
+Show only:
+
+- Attendance Rate
+- Full Days
+- Half Days
+- Absent Days
+- Leave Days
+- Working Days
+- Attendance History
+
+Never display Teacher Attendance controls.
+
+Rename confusing IDs:
+
+student-att-late
+→ student-att-half-days
+
+parent-att-late
+→ parent-att-half-days
+
+Student Marks:
+
+Title:
+
+My Published Marks
+
+Description:
+
+View verified and published academic examination marks.
+
+Show only marks where:
+
+mark.studentId === currentAccount.studentId
+
+and:
+
+mark.status === "Published"
+
+Student Report Card:
+
+- Read-only
+- Published records only
+- No Student selector
+- No conduct fields
+- No remark editing
+- No Generate button
+- No Publish button
+
+Student Homework:
+
+- Only the logged-in Student’s class.
+- Published assignments only.
+- Show only the logged-in Student’s submission.
+- Do not allow submissions after the due date unless explicitly permitted.
+- Do not expose classmates’ submissions.
+
+Student Quiz:
+
+- Published quizzes only.
+- Correct class only.
+- Respect retryAllowed.
+- Prevent duplicate save of the same completed attempt unless retry is allowed.
+- Calculate marks using each question’s configured marks instead of assuming fixed marks.
+
+Student Transport:
+
+Never fall back to:
+
+transportRoutes[0]
+
+If no route is assigned, show:
+
+No transport route assigned.
+
+Never show another Student’s route.
+
+==================================================
+PHASE 4: HALL-TICKET WORKFLOW
+==================================================
+
+Fix the Hall Ticket workflow for every role.
+
+Student:
+
+- Hide the Student selector.
+- Automatically use getCurrentStudent().
+- Show Student name, admission number, class, exam, eligibility, and blocking reason.
+- Never show “No eligible students.”
+- Never require the Student to select themselves.
+
+Parent:
+
+- Automatically use getSelectedParentChild().
+- Hide the generic Student selector.
+- Refresh eligibility when the selected child changes.
+- Show the selected child’s Hall Ticket status.
+- Allow Hall Ticket download only when eligible.
+
+Teacher:
+
+- May view or print Hall Tickets only for assigned Students.
+- Must not determine fee eligibility.
+- Must not access unrelated classes.
+
+Admin:
+
+- May select any active Student.
+- May control Hall Ticket release.
+- May configure eligibility policy.
+
+Add configurable Hall Ticket policy to School Settings:
+
+- Always Eligible
+- Clear All Overdue Fees
+- Clear Examination Fee Only
+- Principal Approval Required
+
+Do not hardcode one policy for every school.
+
+Create:
+
+function getHallTicketEligibility(
+    student,
+    exam,
+    policy
+) {
+    return {
+        eligible: true,
+        reasons: [],
+        outstandingAmount: 0,
+        released: true
+    };
+}
+
+Hall Ticket eligibility should consider configured policy and:
+
+- Active enrolment
+- Exam schedule availability
+- Hall Ticket release status
+- Relevant overdue balance
+- Exam fee, when policy requires it
+- Principal approval, when policy requires it
+
+Do not block a Hall Ticket only because a future invoice exists.
+
+“Go To Fees” should appear for Parent users.
+
+For Student users, show:
+
+Contact your Parent/Guardian or School Office.
+
+==================================================
+PHASE 5: ATTENDANCE
+==================================================
+
+Student Attendance must use only:
+
+- morningStatus
+- afternoonStatus
+- dailyResult
+
+Allowed session values:
+
+- Present
+- Absent
+- Leave
+
+Allowed daily results:
+
+- Full Day
+- Half Day
+- Absent
+- Leave
+
+Keep record.status only inside legacy migration.
+
+Do not use it in:
+
+- Dashboard calculations
+- Student Attendance
+- Parent Attendance
+- Admin Attendance Reports
+- Teacher Dashboard
+- Report Cards
+
+Class Teacher-only attendance:
+
+- Attendance Entry appears only to Teachers who are assigned Class Teachers.
+- Class selector contains only getClassTeacherClasses(currentAccount.teacherId).
+- Before rendering or saving, enforce isClassTeacherForClass().
+- Subject allocation alone must not grant Attendance Entry.
+
+Fix table colspan values:
+
+Teacher attendance has five columns:
+
+- Roll
+- Student
+- Morning
+- Afternoon
+- Daily Result
+
+Empty rows must use:
+
+colspan="5"
+
+Attendance summary:
+
+Half Day counts as 0.5 attended day.
+
+Admin Dashboard and Teacher Dashboard must calculate:
+
+fullDays + (halfDays * 0.5)
+
+Do not count Half Day as a complete present day.
+
+Attendance corrections must remain atomic:
+
+- Validate all rows.
+- If any correction needs a reason and no reason exists, save nothing.
+- Preserve createdAt.
+- Update correctedBy and correctedAt.
+- Store correctionReason.
+
+==================================================
+PHASE 6: SUBJECT ALLOCATION AND TEACHER PERMISSIONS
+==================================================
+
+Canonical responsibility sources:
+
+Class Teacher:
+class.classTeacherId
+
+Subject Teacher:
+subjectAllocations
+
+Do not use the following in active authorization:
+
+- teacherRole
+- assignedClassIds
+- assignedSubjects
+- class.teacherId
+- class.teacherName
+
+Legacy fields may exist only during migration.
+
+Active class rendering should use:
+
+- classTeacherId
+- classTeacherName
+
+Fix renderClassesList():
+
+c.teacherName
+→ c.classTeacherName
+
+Use exact class-subject authorization:
+
+teacherCanManageSubject(
+    classId,
+    subject
+)
+
+Apply to:
+
+- Homework
+- Marks
+- Quiz
+- Lesson Planner
+- Question Paper Generator
+- Teacher performance
+- Notifications
+- Parent communication
+
+Do not authorize class and subject independently.
+
+In loadTeacherMarksRoster(), replace broad validation:
+
+teacherCanAccessSubject(currentSub)
+
+with:
+
+teacherCanManageSubject(
+    classSelect.value,
+    currentSub
+)
+
+Remove teacherCanAccessSubject() from active permission decisions.
+
+==================================================
+PHASE 7: HOMEWORK
+==================================================
+
+Teacher Homework class dropdown should include classes where the Teacher has at least one active Subject Allocation.
+
+Do not restrict it to getClassTeacherClasses().
+
+Subjects must come from:
+
+getTeacherSubjectsForClass(
+    teacherId,
+    selectedClassId
+)
+
+All actions must enforce exact permission:
+
+- Create
+- Edit
+- Close
+- Reopen
+- Delete
+- Review
+- Feedback
+
+Student submissions:
+
+- Prevent late submission unless policy allows it.
+- Prevent editing after the due date.
+- Preserve submission history when edited.
+- Do not reset Teacher feedback unnecessarily.
+- Replace filename placeholders with clearly labelled prototype behavior or real file upload later.
+
+==================================================
+PHASE 8: MARKS AND VERIFICATION
+==================================================
+
+Use one storage key only:
+
+marks
+
+Fix:
+
+saveStore("marksRecords", marksRecords)
+
+to:
+
+saveStore("marks", marksRecords)
+
+Do not use another Marks key.
+
+Marks lifecycle:
+
+- Draft
+- Submitted For Verification
+- Verified
+- Rejected
+- Published
+
+Subject Teacher:
+
+- Save Draft
+- Edit Draft
+- Edit Rejected
+- Submit for Verification
+
+Subject Teacher cannot:
+
+- Verify
+- Publish
+
+Assigned Class Teacher:
+
+- Review Submitted records for their exact class
+- Correct with an audit reason
+- Verify
+- Reject with reason
+- Publish Verified marks
+
+Admin:
+
+- View all records
+- Perform authorized oversight actions
+
+Make Marks saving atomic.
+
+Current row-by-row prompt logic can partially save records.
+
+Replace it with:
+
+1. Read all rows.
+2. Validate all marks.
+3. Identify protected records that changed.
+4. Collect correction reasons.
+5. If any validation or reason is missing, save nothing.
+6. Apply all changes only after complete validation succeeds.
+
+Do not use:
+
+isClassTeacher()
+
+for class-specific actions.
+
+Use:
+
+isClassTeacherForClass(
+    currentAccount.teacherId,
+    classId
+)
+
+Preserve:
+
+- enteredByTeacherId
+- submittedAt
+- verifiedByTeacherId
+- verifiedAt
+- rejectedByTeacherId
+- rejectedAt
+- rejectionReason
+- amendments
+- originalScore
+
+Do not overwrite enteredByTeacherId when another authorized Teacher corrects a record.
+
+Published Marks must be read-only except through an authorized amendment workflow.
+
+==================================================
+PHASE 9: REPORT CARDS
+==================================================
+
+Remove active Term logic completely.
+
+Current code still passes:
+
+"Annual"
+
+and renders:
+
+Term: Annual
+
+Use only:
+
+- Academic Year
+- Exam
+
+Fix:
+
+renderOfficialReportCard(
+    container,
+    studentId,
+    academicYearId,
+    exam,
+    teacherComment
+)
+
+Remove the term parameter.
+
+Do not default to:
+
+students[0]
+
+Current behavior:
+
+students.find(...) || students[0]
+
+is unsafe because it can show another Student’s report.
+
+Use:
+
+const student = students.find(...);
+
+if (!student) {
+    display an error;
+    return;
+}
+
+Student and Parent:
+
+- View published Report Cards only.
+- Do not show a report only because Published Marks exist.
+- Verify the Report Card record itself has status Published.
+- Filter by correct Student, Academic Year, and Exam.
+
+Teacher:
+
+Only the assigned Class Teacher can generate and publish the Report Card for that exact Student’s class.
+
+Report Card marks must use:
+
+- studentId
+- classId
+- academicYearId
+- selected exam
+- status === "Published"
+
+Fix:
+
+getReportCardMarks()
+
+to filter classId and Published status.
+
+Do not combine different exams in one final Report Card.
+
+Required subject validation must use:
+
+getSubjectsForClass(student.classId)
+
+Ensure pass status checks every required subject, not only the overall average.
+
+Update wording:
+
+Official Report Card
+→ Prototype Report Card
+
+Verified Academic Document
+→ Prototype Academic Document
+
+Term:
+→ Exam:
+
+Attendance wording:
+
+“day-equivalents attended”
+
+not:
+
+“sessions attended”
+
+Store and display:
+
+- conduct
+- academicRemark
+- conductRemark
+- Class Teacher
+- publication status
+- publishedBy
+- publishedAt
+
+==================================================
+PHASE 10: FEES AND PAYMENTS
+==================================================
+
+Use one canonical invoice-balance model.
+
+Create:
+
+function getInvoicePaidAmount(invoiceId) {
+    return paymentRecords
+        .flatMap(payment =>
+            payment.allocations || []
+        )
+        .filter(allocation =>
+            allocation.invoiceId === invoiceId
+        )
+        .reduce(
+            (sum, allocation) =>
+                sum + Number(
+                    allocation.amountApplied || 0
+                ),
+            0
+        );
+}
+
+Create:
+
+function getInvoiceBalance(invoice) {
+    return Math.max(
+        0,
+        Number(invoice.amount || 0) -
+        getInvoicePaidAmount(invoice.invoiceId)
+    );
+}
+
+Use these helpers everywhere:
+
+- Admin Dashboard
+- Fee Ledger
+- Parent Dashboard
+- Parent Fees
+- Defaulters
+- Hall Ticket eligibility
+- Student Profile
+- Payment History
+- Receipt generation
+
+Do not mix:
+
+- status
+- balance
+- payment.invoiceId
+- payment.allocations
+
+without canonical helpers.
+
+Multi-invoice Parent payment:
+
+The UI uses:
+
+multiple
+
+Therefore the submit handler must use:
+
+Array.from(
+    select.selectedOptions
+).map(option => option.value)
+
+Validate:
+
+- At least one invoice selected
+- Every invoice belongs to the selected child
+- Every invoice exists
+- Every invoice has a positive remaining balance
+- Total allocation does not exceed outstanding balances
+- Transaction reference is not a duplicate
+
+Store:
+
+{
+    id,
+    studentId,
+    parentAccountId,
+    totalAmount,
+    allocations: [
+        {
+            invoiceId,
+            amountApplied
+        }
+    ],
+    paymentMethod,
+    transactionReference,
+    paidAt
+}
+
+Admin Cash Payment must use the same model.
+
+Receipts must require:
+
+- Valid payment record
+- Valid allocation
+- Valid invoice
+- Valid Student
+
+Support receipts containing multiple invoice allocations.
+
+Replace:
+
+Official Fee Payment Receipt
+→ Prototype Fee Payment Receipt
+
+Replace:
+
+Computer-generated receipt · Valid without physical signature
+→ Prototype receipt for demonstration only
+
+==================================================
+PHASE 11: NOTIFICATIONS, MESSAGES, AND PRIVACY
+==================================================
+
+Notifications must always contain:
+
+- senderId
+- senderRole
+- readByAccountIds
+
+Remove the old read boolean from active workflow.
+
+Implement filters:
+
+- Type
+- Read
+- Unread
+
+Dismissing a notification must not globally delete a School notice for everyone.
+
+Instead store per-account dismissal or read state.
+
+Teacher notification selectors must include only:
+
+- Assigned classes
+- Students in assigned classes
+
+Do not populate every Student in the school for Teacher users.
+
+Parent messages:
+
+- Parent only sees conversations for currentAccount.id.
+- Teacher only sees conversations assigned to that Teacher and authorized Students.
+- Parent Teacher dropdown is rebuilt when Child changes.
+- Parent cannot select an unrelated Teacher.
+
+Meeting requests:
+
+Use:
+
+getParentCommunicationTeachers(child)
+
+Do not populate every active Teacher.
+
+Reject past meeting dates.
+
+Complaints:
+
+- Parent sees only own complaints.
+- Teacher sees assigned or authorized class complaints.
+- Admin sees all.
+- Internal notes never appear to Parents.
+- All status changes must be role authorized.
+
+==================================================
+PHASE 12: QUIZ
+==================================================
+
+There are duplicate teacherOwnsQuiz() definitions.
+
+Keep one canonical implementation.
+
+It must respect:
+
+ownershipStatus === "Unassigned"
+
+Teacher cannot edit, publish, or delete an Unassigned Quiz.
+
+Admin may manage Unassigned Quizzes if Admin Quiz management is supported.
+
+Fix normalizeQuizRecord():
+
+Do not use:
+
+teacherId:
+quiz.teacherId || quiz.teacherAccountId
+
+Teacher ID and Account ID are different identifiers.
+
+Keep:
+
+- teacherId
+- teacherAccountId
+- ownershipStatus
+
+Student Quiz scoring must use configured question marks.
+
+Save:
+
+- selected answers
+- score
+- maxScore
+- percentage
+- submittedAt
+
+Respect retryAllowed before starting or saving a second attempt.
+
+==================================================
+PHASE 13: STUDENT, PARENT, AND TEACHER DATA SAFETY
+==================================================
+
+Fix Teacher Student Profile parent lookup.
+
+Current code uses:
+
+student.parentId
+
+The canonical field is:
+
+student.parentAccountId
+
+Use:
+
+parents.find(
+    parent =>
+        parent.id === student.parentAccountId
+)
+
+Before opening a Teacher Student Profile, enforce:
+
+teacherCanViewClass(student.classId)
+
+For Student and Parent readers:
+
+Never fall back to the first Student, first Transport Route, first Parent, or first Report.
+
+If scoped data is missing:
+
+- Show a clear neutral empty state.
+- Return safely.
+- Do not display unrelated records.
+
+==================================================
+PHASE 14: ADMIN DATA AND DASHBOARD CONSISTENCY
+==================================================
+
+Fix Admin Attendance Rate:
+
+Use:
+
+fullDays + halfDays * 0.5
+
+Do not use only Full Day records.
+
+Fee metrics must use invoice balances and payment allocations.
+
+Pending Report Cards panel must inspect Report Card status, not only Draft Marks.
+
+Class-performance summary must be factual and based on:
+
+- Class attendance equivalent
+- Published marks
+- Invoice balance
+- Open complaints
+
+Display classTeacherName consistently.
+
+Do not append complaint summaries into the Recent Notices panel.
+
+Create a separate complaints panel if needed, or rely on existing complaint KPI cards.
+
+Use defensive guards for every dashboard element.
+
+One failed panel must not produce a completely blank dashboard.
+
+==================================================
+PHASE 15: PROTOTYPE AND UI CLEANUP
+==================================================
+
+Replace hardcoded Student metrics:
+
+- 12 days
+- #08 of 42
+
+with:
+
+Not Available
+
+unless real calculations exist.
+
+Timetable:
+
+The Student Dashboard says no timetable records, but the Timetable page contains static rows.
+
+Use one timetable data source.
+
+Either:
+
+- Render the same prototype timetable on both pages, or
+- Clearly show “Timetable setup pending” in both places.
+
+Transport:
+
+No fallback to another route.
+
+AI Tutor and AI Teacher tools:
+
+Keep clearly labelled as simulated prototype tools.
+
+Replace normal browser alerts and prompts where practical with:
+
+- Inline messages
+- Toasts
+- Confirmation dialog component
+- Correction reason modal
+
+Keep window.print() where appropriate.
+
+==================================================
+PHASE 16: SECURITY BOUNDARY
+==================================================
+
+Keep the existing prototype notice.
+
+Do not claim the application is production secure.
+
+Clearly document:
+
+- Passwords are stored in localStorage.
+- Authentication is client-side.
+- Authorization is client-side.
+- Payments are demonstrations.
+- File attachments are placeholders.
+- AI responses are simulated.
+- Data is not stored in a secure backend.
+
+These are accepted prototype limitations.
+
+Do not attempt to hide these limitations through wording.
+
+==================================================
+PHASE 17: DEMO QA
+==================================================
+
+Expand Demo QA checks.
+
+Add:
+
+- Exactly one active page after navigation
+- No unauthorized role subview visible
+- No duplicate DOM IDs
+- No missing JavaScript-referenced DOM IDs
+- Every active Class Teacher exists
+- Every active Subject Allocation references an active Teacher
+- No duplicate active class-subject allocation
+- Every Student references a valid class
+- Every Parent references valid linked Students
+- No Student attendance uses active legacy Late status
+- Every dailyResult matches Morning and Afternoon
+- No duplicate Student/date attendance records
+- Every mark subject is valid for the class
+- Every entering Teacher has a valid Subject Allocation
+- Every verifying Teacher is the Class Teacher for that exact class
+- Published Mark records have verification metadata
+- Published Report Cards have all required subjects
+- Payments reference valid invoices
+- Payment allocations do not exceed invoice balances
+- Transaction references are unique
+- No Quiz has fabricated Teacher ownership
+- No Student or Parent reader falls back to another Student’s record
+
+Demo QA must report issues only.
+
+Do not silently delete or rewrite failed records.
+
+==================================================
+REGRESSION TESTS
+==================================================
+
+Test every demo login.
+
+ADMIN:
+
+- Opens Admin Dashboard.
+- Dashboard is not blank.
+- Every KPI renders.
+- No Student/Parent/Teacher dashboard remains active.
+
+TEACHER:
+
+- Opens Teacher Dashboard.
+- Sees only assigned classes and subjects.
+- Attendance appears only for assigned Class Teacher classes.
+- Homework and Marks use exact class-subject allocation.
+- Cannot verify or publish another class.
+
+PARENT:
+
+- Opens Parent Dashboard.
+- Child switch updates every module.
+- Sees only linked children.
+- Parent can pay valid pending invoices.
+- Messages, meetings, complaints, transport, marks, attendance, and report card use the selected child.
+
+STUDENT:
+
+- Opens Student Dashboard.
+- Cannot see Teacher/Admin forms.
+- Attendance is read-only.
+- Marks are read-only and Published only.
+- Report Card is Published and read-only.
+- Hall Ticket has no Student selector.
+- Transport belongs to the logged-in Student.
+- Homework and Quiz show only own records.
+
+NAVIGATION:
+
+After every page change:
+
+document.querySelectorAll(
+    ".page.active-page"
+).length === 1
+
+REFRESH:
+
+- Data remains after refresh.
+- Correct role must log in again if applications do not persist sessions.
+- No stale page visibility from the previous role remains.
+
+CONSOLE:
+
+Verify:
+
+- No ReferenceError
+- No TypeError
+- No null-element crash
+- No undefined array operation
+- No invalid storage key
+- No duplicate function conflict
+- No unauthorized action succeeds
+
+==================================================
+OUTPUT REQUIREMENTS
+==================================================
+
+Modify the existing files directly:
+
+1. index.html
+2. style.css
+3. script.js
+
+Do not produce shortened replacement files.
+
+Do not omit unrelated working modules.
+
+Do not write:
+
+- TODO
+- Implement later
+- Keep existing code
+- Same as before
+- Remaining code unchanged
+
+After implementation, return a report containing:
+
+1. Files changed
+2. Login and dashboard fixes
+3. Role-view isolation fixes
+4. Student portal fixes
+5. Parent portal fixes
+6. Teacher portal fixes
+7. Admin portal fixes
+8. Attendance fixes
+9. Homework fixes
+10. Marks workflow fixes
+11. Report Card fixes
+12. Hall Ticket fixes
+13. Fees and payment fixes
+14. Notification and privacy fixes
+15. Quiz fixes
+16. Storage-key fixes
+17. Legacy code removed
+18. Tests performed
+19. Tests passed
+20. Tests failed
+21. Remaining prototype limitations
+
+Do not claim that a test passed unless it was actually executed.
+
+The priority is stability, correct role mapping, privacy, and workflow consistency.
+
+Do not add new features until these requirements are complete.
