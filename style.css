@@ -46,6 +46,141 @@ button {
     display: none !important;
 }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+:focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: 2px;
+}
+
+.password-field {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.password-field input {
+    flex: 1;
+}
+
+.message-thread {
+    display: grid;
+    gap: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.message-bubble {
+    max-width: 80%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #f1f5f3;
+}
+
+.message-bubble.message-own {
+    justify-self: end;
+    background: var(--teal-light);
+}
+
+.parent-alerts-panel {
+    margin-top: 20px;
+}
+
+.alert-list {
+    display: grid;
+    gap: 8px;
+}
+
+.dashboard-alert {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 10px 12px;
+    border-left: 3px solid var(--blue);
+    background: #f4f8f8;
+}
+
+.dashboard-alert.attention {
+    border-color: var(--yellow);
+    background: #fff8ed;
+}
+
+.dashboard-alert.urgent {
+    border-color: var(--red);
+    background: #fff1ef;
+}
+
+.notification-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.report-progress {
+    min-width: 220px;
+    margin-bottom: 14px;
+}
+
+.report-progress span,
+.report-progress b {
+    display: block;
+    font-size: 0.78rem;
+}
+
+.report-progress b {
+    margin-top: 5px;
+    color: var(--muted);
+}
+
+.app-toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 2000;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: #fff;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.app-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.app-toast.error { background: var(--red); }
+.app-toast.warning { background: var(--yellow); }
+.app-toast.info { background: var(--blue); }
+
+.help-popover {
+    position: fixed;
+    top: 76px;
+    right: 24px;
+    z-index: 1500;
+    width: min(360px, calc(100vw - 32px));
+    box-shadow: 0 18px 40px rgba(23, 35, 47, 0.16);
+}
+
+.message-bubble p {
+    margin: 4px 0;
+}
+
 /* Authentication Page */
 .login-page {
     min-height: 100vh;
@@ -252,6 +387,51 @@ input:focus, select:focus, textarea:focus {
 .app {
     display: flex;
     min-height: 100vh;
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
+.sidebar-close {
+    display: none;
+    background: transparent;
+    color: #fff;
+    font-size: 1.8rem;
+    align-self: flex-end;
+    padding: 0 8px 8px;
+}
+
+.quick-actions-panel {
+    margin-bottom: 24px;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.quick-actions-grid button {
+    background: #f5f8f6;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 14px;
+    text-align: left;
+    font-weight: 700;
+}
+
+.quick-actions-grid button:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+}
+
+.checkbox-list {
+    margin: 18px 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 14px;
 }
 
 /* Sidebar & Role Navigation */
@@ -600,7 +780,7 @@ tbody tr:hover {
     color: var(--red);
 }
 
-.status.pending, .status.draft, .status.late {
+.status.pending, .status.draft, .status.half-day, .status.unassigned {
     background: #fff1df;
     color: var(--yellow);
 }
@@ -899,6 +1079,24 @@ tbody tr:hover {
     border-radius: 10px;
     padding: 30px;
     margin-top: 15px;
+}
+
+.report-period-controls {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.report-period-controls label {
+    margin: 0;
+}
+
+.report-period-controls select {
+    width: auto;
+    min-width: 150px;
 }
 
 .report-header {
@@ -1340,6 +1538,42 @@ tbody tr:hover {
     margin-bottom: 24px;
 }
 
+.quiz-question-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 14px;
+    background: #fbfdfb;
+}
+
+.quiz-question-actions, .quiz-list-actions, .quiz-builder-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.quiz-builder-toolbar {
+    justify-content: space-between;
+    margin-top: 12px;
+}
+
+.quiz-builder-summary {
+    display: flex;
+    gap: 14px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.quiz-review-row {
+    display: grid;
+    gap: 4px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.82rem;
+}
+
 .published-quiz {
     background: #ffffff;
     border: 1px solid var(--line);
@@ -1431,7 +1665,7 @@ tbody tr:hover {
         color: #000;
     }
 
-    .sidebar, .topbar, .login-page, .report-actions, .primary-button, .light-button, .text-button, .menu-toggle, .prompt-chips, .chat-form {
+    .sidebar, .topbar, .login-page, .report-actions, .primary-button, .light-button, .text-button, .menu-toggle, .prompt-chips, .chat-form, form, .quiz-builder-toolbar {
         display: none !important;
     }
 
@@ -1457,6 +1691,47 @@ tbody tr:hover {
         border: 1px solid #ccc;
         box-shadow: none;
         page-break-inside: avoid;
+    }
+}
+
+@media (max-width: 640px) {
+    .password-field, .account-row-actions, .quiz-builder-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .password-field .light-button,
+    .account-row-actions button,
+    .quiz-builder-toolbar button {
+        width: 100%;
+    }
+
+    .message-bubble {
+        max-width: 100%;
+    }
+
+    .notification-filters select {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .app-toast {
+        right: 16px;
+        bottom: 16px;
+    }
+
+    .help-popover {
+        top: 70px;
+        right: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
     }
 }
 
@@ -1518,6 +1793,30 @@ tbody tr:hover {
         height: 100vh;
     }
 
+    .sidebar-close {
+        display: block;
+    }
+
+    .sidebar-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 35, 31, 0.45);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 999;
+    }
+
+    .sidebar-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    body.sidebar-open {
+        overflow: hidden;
+    }
+
     .sidebar.mobile-open {
         transform: translateX(0);
     }
@@ -1533,7 +1832,7 @@ tbody tr:hover {
         margin-bottom: 20px;
     }
 
-    .stats, .stats.admin-stats, .feature-grid, .parent-details, .form-grid, .form-grid.three-col {
+    .stats, .stats.admin-stats, .feature-grid, .parent-details, .form-grid, .form-grid.three-col, .quick-actions-grid {
         grid-template-columns: 1fr;
     }
 
@@ -1562,5 +1861,48 @@ tbody tr:hover {
 
     .child-select {
         width: 100%;
+    }
+
+    .report-period-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .report-period-controls select {
+        width: 100%;
+    }
+}
+
+/* Final cleanup: session attendance and allocation states */
+.attendance-daily-result {
+    display: inline-block;
+    min-width: 76px;
+    font-weight: 700;
+    color: var(--teal-dark);
+}
+.status.full-day, .status.verified {
+    background: #e3f3ec;
+    color: var(--green);
+}
+.status.half-day, .status.unassigned {
+    background: #fff1df;
+    color: var(--yellow);
+}
+.status.leave, .status.rejected {
+    background: #f4edf8;
+    color: #724f86;
+}
+.table-scroll,
+#admin-attendance-report-container {
+    width: 100%;
+    overflow-x: auto;
+}
+.attendance-capture-table th,
+.attendance-capture-table td {
+    white-space: nowrap;
+}
+@media (max-width: 640px) {
+    .attendance-capture-table select {
+        min-width: 108px;
     }
 }
