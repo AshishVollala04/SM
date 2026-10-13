@@ -613,7 +613,8 @@ const initialNotifications = [
         createdAt: '2026-10-11T10:00:00Z',
         senderId: 'account-admin-1',
         senderRole: 'admin',
-        readByAccountIds: []
+        readByAccountIds: [],
+        dismissedByAccountIds: []
     },
     {
         id: 'notif-2',
@@ -626,7 +627,8 @@ const initialNotifications = [
         createdAt: '2026-10-12T09:15:00Z',
         senderId: 'account-teacher-1',
         senderRole: 'teacher',
-        readByAccountIds: []
+        readByAccountIds: [],
+        dismissedByAccountIds: []
     },
     {
         id: 'notif-3',
@@ -639,7 +641,8 @@ const initialNotifications = [
         createdAt: '2026-10-13T10:00:00Z',
         senderId: 'account-admin-1',
         senderRole: 'admin',
-        readByAccountIds: []
+        readByAccountIds: [],
+        dismissedByAccountIds: []
     }
 ];
 
@@ -732,7 +735,8 @@ const initialSchoolSettings = {
     phone: '+91 90000 00000',
     email: 'office@school.edu',
     address: '42 Knowledge Corridor, Hyderabad, Telangana',
-    color: '#087f73'
+    color: '#087f73',
+    hallTicketPolicy: 'Always Eligible'
 };
 
 const APP_SCHEMA_VERSION = 5;
@@ -763,7 +767,7 @@ function migrateStoredData() {
     });
     const examMap = { 'Unit Test 1': 'Unit 1', 'Unit Test 2': 'Unit 2', 'Term 1 Examination': 'Quarterly', 'Term 2 Examination': 'Half Yearly' };
     marksRecords = marksRecords.map((mark) => ({ ...mark, exam: examMap[mark.exam] || mark.exam, academicYearId: mark.academicYearId || yearId, term: undefined, status: ['Draft', 'Submitted For Verification', 'Verified', 'Rejected', 'Published'].includes(mark.status) ? mark.status : mark.status === 'Published' ? 'Published' : 'Draft', enteredByTeacherId: mark.enteredByTeacherId || mark.teacherId || null, amendments: Array.isArray(mark.amendments) ? mark.amendments : [] }));
-    notificationRecords = notificationRecords.map((notification) => ({ ...notification, readByAccountIds: Array.isArray(notification.readByAccountIds) ? notification.readByAccountIds : [] }));
+    notificationRecords = notificationRecords.map((notification) => ({ ...notification, readByAccountIds: Array.isArray(notification.readByAccountIds) ? notification.readByAccountIds : [], dismissedByAccountIds: Array.isArray(notification.dismissedByAccountIds) ? notification.dismissedByAccountIds : [] }));
     parentMessages = parentMessages.map((conversation) => ({ ...conversation, messages: (conversation.messages || []).map((message) => ({ ...message, id: message.id || createUniqueId('message-entry'), readByAccountIds: Array.isArray(message.readByAccountIds) ? message.readByAccountIds : [] })) }));
     saveStore('attendance', attendanceRecords);
     saveStore('marks', marksRecords);
@@ -776,7 +780,27 @@ function migrateStoredData() {
 }
 
 function runDemoIntegrityChecks() {
+    const duplicateIds = findDuplicateDomIds();
+    const criticalIds = ['login-page', 'login-form', 'app', 'side-nav', 'page-title', 'page-attendance', 'page-homework', 'page-marks', 'page-reports', 'page-fees', 'page-exams', 'page-notifications', 'page-questions', 'student-homework-message', 'teacher-verification-panel', 'teacher-verification-list', 'notification-type-filter', 'notification-read-filter', 'app-toast'];
+    const missingCriticalIds = getMissingCriticalDomIds(criticalIds);
+    const activePages = document.querySelectorAll('.page.active-page').length;
+    const studentAttendanceValid = attendanceRecords.every((record) => {
+        const student = students.find((item) => item.id === record.studentId);
+        return student && ['Present', 'Absent', 'Leave'].includes(record.morningStatus) && ['Present', 'Absent', 'Leave'].includes(record.afternoonStatus) && record.dailyResult === calculateDailyAttendanceResult(record.morningStatus, record.afternoonStatus);
+    });
+    const markStatuses = ['Draft', 'Submitted For Verification', 'Verified', 'Rejected', 'Published'];
+    const reportStatuses = ['In Preparation', 'Ready For Class Teacher Review', 'Verified', 'Published'];
     const checks = [
+        ['HTML IDs are unique', duplicateIds.length === 0],
+        ['Exactly one active page when app is open', document.getElementById('app')?.classList.contains('hidden') || activePages === 1],
+        ['No active page while login is open', !document.getElementById('login-page')?.classList.contains('hidden') ? activePages === 0 : true],
+        ['Critical DOM IDs exist', missingCriticalIds.length === 0],
+        ['Student Homework message element exists', Boolean(document.getElementById('student-homework-message'))],
+        ['Teacher verification panel exists', Boolean(document.getElementById('teacher-verification-panel') && document.getElementById('teacher-verification-list'))],
+        ['Notification filters exist', Boolean(document.getElementById('notification-type-filter') && document.getElementById('notification-read-filter'))],
+        ['Student access excludes admin pages', !['admin-dashboard', 'admissions', 'fees', 'settings'].some((page) => roleProfiles.student.access.includes(page))],
+        ['Parent access excludes administration', !['admin-dashboard', 'admissions', 'admin', 'settings'].some((page) => roleProfiles.parent.access.includes(page))],
+        ['Teacher access excludes administration', !['admin-dashboard', 'admissions', 'admin', 'settings', 'fees'].some((page) => roleProfiles.teacher.access.includes(page))],
         ['Students reference existing classes', students.every((student) => classes.some((schoolClass) => schoolClass.id === student.classId))],
         ['Students reference existing parents', students.every((student) => parents.some((parent) => parent.id === student.parentAccountId))],
         ['Parents reference existing students', parents.every((parent) => (parent.linkedStudentIds || []).every((studentId) => students.some((student) => student.id === studentId)))],
@@ -784,7 +808,7 @@ function runDemoIntegrityChecks() {
         ['Attendance references existing students', attendanceRecords.every((record) => students.some((student) => student.id === record.studentId))],
         ['Marks reference existing students and classes', marksRecords.every((mark) => students.some((student) => student.id === mark.studentId) && classes.some((schoolClass) => schoolClass.id === mark.classId))],
         ['Fee invoices reference existing students', feeInvoices.every((invoice) => students.some((student) => student.id === invoice.studentId))],
-        ['Payments reference existing invoices', paymentRecords.every((payment) => feeInvoices.some((invoice) => invoice.invoiceId === payment.invoiceId))],
+        ['Payments reference existing invoices', paymentRecords.every((payment) => (payment.allocations || []).length > 0 && payment.allocations.every((allocation) => feeInvoices.some((invoice) => invoice.invoiceId === allocation.invoiceId)))],
         ['Notifications reference existing students', notificationRecords.filter((notification) => notification.studentId).every((notification) => students.some((student) => student.id === notification.studentId))],
         ['Quiz target classes exist', publishedQuizzes.every((quiz) => classes.some((schoolClass) => schoolClass.id === quiz.targetClass))],
         ['No duplicate admission numbers', new Set(students.map((student) => student.admissionNumber)).size === students.length],
@@ -792,7 +816,18 @@ function runDemoIntegrityChecks() {
         ['No duplicate login emails', new Set(accountRecords.map((account) => normalizeEmail(account.email))).size === accountRecords.length],
         ['No duplicate invoice IDs', new Set(feeInvoices.map((invoice) => invoice.invoiceId)).size === feeInvoices.length],
         ['Attendance records have academic years', attendanceRecords.every((record) => Boolean(record.academicYearId))],
+        ['Student Attendance uses two-session model', studentAttendanceValid],
+        ['No duplicate Student/date Attendance', new Set(attendanceRecords.map((record) => `${record.studentId}:${record.date}`)).size === attendanceRecords.length],
+        ['Attendance markers resolve', attendanceRecords.every((record) => (!record.markedByTeacherId || teachers.some((teacher) => teacher.id === record.markedByTeacherId)) && (!record.markedByAccountId || accountRecords.some((account) => account.id === record.markedByAccountId)))],
         ['Marks records have academic years and exams', marksRecords.every((mark) => Boolean(mark.academicYearId && mark.exam))],
+        ['Marks statuses are canonical', marksRecords.every((mark) => markStatuses.includes(mark.status))],
+        ['Marks composite keys are unique', new Set(marksRecords.map((mark) => `${mark.studentId}:${mark.classId}:${mark.subject}:${mark.academicYearId}:${mark.exam}`)).size === marksRecords.length],
+        ['Report Card records have valid shape', reportCards.every((card) => card.id === getReportCardKey(card.studentId, card.academicYearId, card.exam) && students.some((student) => student.id === card.studentId) && classes.some((schoolClass) => schoolClass.id === card.classId) && reportStatuses.includes(card.status))],
+        ['Payment allocations are valid', paymentRecords.every((payment) => payment.allocations?.length && payment.allocations.every((allocation) => feeInvoices.some((invoice) => invoice.invoiceId === allocation.invoiceId && invoice.studentId === payment.studentId) && Number(allocation.amountApplied) > 0))],
+        ['Payment totals match allocations', paymentRecords.every((payment) => Math.abs(getPaymentTotal(payment) - (payment.allocations || []).reduce((sum, allocation) => sum + Number(allocation.amountApplied || 0), 0)) < 0.01)],
+        ['Notification records use canonical fields', notificationRecords.every((notification) => notification.senderId && ['admin', 'teacher', 'parent', 'student'].includes(notification.senderRole) && Array.isArray(notification.readByAccountIds) && Array.isArray(notification.dismissedByAccountIds))],
+        ['Quiz maximum marks are accurate', publishedQuizzes.every((quiz) => quiz.totalMarks === getQuizMaximumScore(quiz.questions))],
+        ['Hall Ticket policy is supported', ['Always Eligible', 'Clear All Overdue Fees', 'Clear Examination Fee Only', 'Principal Approval Required'].includes(schoolSettings.hallTicketPolicy || 'Always Eligible')],
         ['Schema migration is current', Number(localStorage.getItem('futureschoolSchemaVersion') || 0) >= APP_SCHEMA_VERSION],
         ['Active classes have valid Class Teachers', classes.filter((schoolClass) => schoolClass.active).every((schoolClass) => !schoolClass.classTeacherId || teachers.some((teacher) => teacher.active && teacher.id === schoolClass.classTeacherId))],
         ['Primary and Senior classes have valid subject coverage', classes.filter((schoolClass) => schoolClass.active && schoolClass.gradeNumber >= 1).every((schoolClass) => subjectsForClass(schoolClass.id).every((subject) => subjectAllocations.some((allocation) => allocation.active !== false && allocation.academicYearId === defaultAcademicYearId && allocation.classId === schoolClass.id && allocation.subject === subject && teachers.some((teacher) => teacher.active && teacher.id === allocation.teacherId))))],
@@ -809,6 +844,21 @@ function renderDemoIntegrityChecks() {
     if (!container || currentRole !== 'admin') return;
     const result = runDemoIntegrityChecks();
         container.innerHTML = result.checks.map(([label, passed]) => `<div class="account-row"><div><b>${escapeHtml(label)}</b><small>${passed ? 'Pass' : 'Fail: needs review'}</small></div><span class="status ${passed ? 'paid' : 'absent'}">${passed ? 'Pass' : 'Fail'}</span></div>`).join('');
+}
+
+function findDuplicateDomIds() {
+    const counts = new Map();
+    document.querySelectorAll('[id]').forEach((element) => counts.set(element.id, (counts.get(element.id) || 0) + 1));
+    return [...counts.entries()].filter(([, count]) => count > 1).map(([id]) => id);
+}
+
+function getVisibleRoleSubviews() {
+    const ids = ['teacher-attendance-view', 'admin-attendance-view', 'student-attendance-view', 'parent-attendance-view', 'teacher-homework-view', 'admin-homework-view', 'student-homework-view', 'parent-homework-view', 'teacher-marks-view', 'admin-marks-view', 'student-marks-view', 'parent-marks-view', 'report-manager', 'report-reader', 'admin-fees-view', 'parent-fees-view', 'teacher-quiz-view', 'student-quiz-view'];
+    return ids.filter((id) => { const element = document.getElementById(id); return element && !element.classList.contains('hidden'); });
+}
+
+function getMissingCriticalDomIds(ids = []) {
+    return ids.filter((id) => !document.getElementById(id));
 }
 
 // Store Helper Functions
@@ -876,6 +926,19 @@ saveStore('complaints', complaints);
 let teacherNotes = getStore('teacherNotes', []);
 let reportCards = getStore('reportCards', []);
 
+marksRecords = marksRecords.map((mark) => mark.status === 'Published' ? ({
+    ...mark,
+    academicYearId: mark.academicYearId || 'ay-2026-27',
+    enteredByTeacherId: mark.enteredByTeacherId || 't-101',
+    submittedAt: mark.submittedAt || mark.savedAt || null,
+    verifiedByTeacherId: mark.verifiedByTeacherId || 't-101',
+    verifiedAt: mark.verifiedAt || mark.savedAt || null,
+    publishedByTeacherId: mark.publishedByTeacherId || 't-101',
+    publishedAt: mark.publishedAt || mark.savedAt || null,
+    amendments: Array.isArray(mark.amendments) ? mark.amendments : []
+}) : mark);
+saveStore('marks', marksRecords);
+
 const initialSubjectAllocations = [
     // Class 10-A (Class Teacher: Mr. Joseph / t-101)
     { id: 'alloc-10a-telugu', academicYearId: 'ay-2026-27', classId: 'c-10a', subject: 'Telugu', teacherId: 't-103', active: true },
@@ -939,7 +1002,8 @@ notificationRecords = notificationRecords.map((notification) => ({
     ...notification,
     senderId: notification.senderId || null,
     senderRole: notification.senderRole || null,
-    readByAccountIds: Array.isArray(notification.readByAccountIds) ? notification.readByAccountIds : []
+    readByAccountIds: Array.isArray(notification.readByAccountIds) ? notification.readByAccountIds : [],
+    dismissedByAccountIds: Array.isArray(notification.dismissedByAccountIds) ? notification.dismissedByAccountIds : []
 }));
 saveStore('notifications', notificationRecords);
 migrateStoredData();
@@ -1120,8 +1184,52 @@ function getStudentClassId(studentId) {
     return student ? student.classId : null;
 }
 
+function getAttendanceMarkerName(record) {
+    const teacher = teachers.find((item) => item.id === record?.markedByTeacherId);
+    if (teacher) return teacher.name;
+    const account = accountRecords.find((item) => item.id === record?.markedByAccountId);
+    return account?.name || 'School Staff';
+}
+
 function getStudentInvoices(studentId) {
     return feeInvoices.filter((inv) => inv.studentId === studentId);
+}
+
+function getInvoicePaidAmount(invoiceId) {
+    return paymentRecords
+        .flatMap((payment) => payment.allocations || [])
+        .filter((allocation) => allocation.invoiceId === invoiceId)
+        .reduce((sum, allocation) => sum + Number(allocation.amountApplied || 0), 0);
+}
+
+function getInvoiceBalance(invoice) {
+    return Math.max(0, Number(invoice?.amount || 0) - getInvoicePaidAmount(invoice?.invoiceId));
+}
+
+function isHallTicketReleased(student, exam) {
+    // Prototype default: released unless Admin explicitly holds the Hall Ticket.
+    if (student.hallTicketReleases && Object.prototype.hasOwnProperty.call(student.hallTicketReleases, exam)) {
+        return student.hallTicketReleases[exam] === true;
+    }
+    return true;
+}
+
+function getHallTicketEligibility(student, exam) {
+    const reasons = [];
+    if (!student) return { eligible: false, reasons: ['Student record is unavailable.'], outstandingAmount: 0, released: false };
+    if (student.status !== 'Active') reasons.push('Student is not active.');
+    if (!exam) reasons.push('Select an examination.');
+    const released = isHallTicketReleased(student, exam);
+    if (!released) reasons.push('Hall Ticket has not been released.');
+    const overdueInvoices = getStudentInvoices(student.id).filter((invoice) => invoice.dueDate < todayISO && getInvoiceBalance(invoice) > 0);
+    const policy = schoolSettings.hallTicketPolicy || 'Always Eligible';
+    let relevantInvoices = [];
+    if (policy === 'Clear All Overdue Fees') relevantInvoices = overdueInvoices;
+    if (policy === 'Clear Examination Fee Only') relevantInvoices = overdueInvoices.filter((invoice) => (invoice.feeCategory || invoice.category) === 'Examination Fee');
+    const outstandingAmount = relevantInvoices.reduce((sum, invoice) => sum + getInvoiceBalance(invoice), 0);
+    if (outstandingAmount > 0) reasons.push(`Outstanding balance: ₹${outstandingAmount.toLocaleString('en-IN')}.`);
+    if (policy === 'Principal Approval Required' && student.hallTicketApprovals?.[exam] !== true) reasons.push('Principal approval is pending.');
+    return { eligible: reasons.length === 0, reasons, outstandingAmount, released };
 }
 
 function getPaymentTotal(payment) { return Number(payment?.totalAmount ?? payment?.amount ?? 0); }
@@ -1209,9 +1317,14 @@ document.getElementById('login-form').addEventListener('submit', (event) => {
 });
 
 function logout() {
+    document.querySelectorAll('.page.active-page').forEach((page) => page.classList.remove('active-page'));
+    hideAllRoleSubviews();
     currentRole = '';
     currentAccount = null;
     currentAccess = [];
+    activeMessageId = null;
+    localStorage.removeItem('futureschoolSelectedChildId');
+    document.querySelectorAll('.modal, [role="dialog"]').forEach((modal) => modal.classList.add('hidden'));
     document.getElementById('app').classList.add('hidden');
     document.getElementById('login-page').classList.remove('hidden');
     document.getElementById('login-form').reset();
@@ -1274,22 +1387,24 @@ function renderSidebarNavigation() {
 }
 
 function showPage(pageName) {
-    // Section 1: Block unauthorized access in showPage(), even when passed manually from console
+    const pages = document.querySelectorAll('.page');
+    pages.forEach((page) => page.classList.remove('active-page'));
+    hideAllRoleSubviews();
+
     if (!currentRole || !currentAccess.includes(pageName)) {
         console.warn(`Access denied to page "${pageName}" for role "${currentRole}"`);
+        showSafeNavigationError('You are not authorized to open this page.');
         return;
     }
 
-    const pages = document.querySelectorAll('.page');
-    pages.forEach((page) => {
-        page.classList.remove('active-page');
-    });
     const targetPage = document.getElementById(`page-${pageName}`);
     if (!targetPage) {
         console.warn(`Page element not found for "${pageName}"`);
+        showSafeNavigationError('This page is unavailable in the prototype.');
         return;
     }
     targetPage.classList.add('active-page');
+    applyRoleView();
     if (document.querySelectorAll('.page.active-page').length > 1) {
         console.warn('Multiple active pages found');
     }
@@ -1304,12 +1419,52 @@ function showPage(pageName) {
     }
 
     refreshCurrentPageView(pageName);
+    validateActiveRoleView();
     closeMobileSidebar();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function hideAllRoleSubviews() {
+    const ids = [
+        'teacher-attendance-view', 'admin-attendance-view', 'student-attendance-view', 'parent-attendance-view',
+        'teacher-homework-view', 'admin-homework-view', 'student-homework-view', 'parent-homework-view',
+        'teacher-marks-view', 'admin-marks-view', 'student-marks-view', 'parent-marks-view',
+        'report-manager', 'report-reader', 'admin-fees-view', 'parent-fees-view',
+        'teacher-quiz-view', 'student-quiz-view', 'teacher-self-attendance-panel'
+    ];
+    ids.forEach((id) => document.getElementById(id)?.classList.add('hidden'));
+}
+
+function showSafeNavigationError(message) {
+    const title = document.getElementById('page-title');
+    if (title) title.textContent = 'Workspace';
+    const toast = document.getElementById('app-toast');
+    if (toast) {
+        toast.textContent = message;
+        toast.className = 'app-toast error visible';
+        window.setTimeout(() => toast.classList.remove('visible'), 3000);
+    } else console.warn(message);
+    const startPage = currentRole ? roleProfiles[currentRole]?.startPage : null;
+    if (startPage && document.getElementById(`page-${startPage}`)) {
+        document.getElementById(`page-${startPage}`).classList.add('active-page');
+        applyRoleView();
+        refreshCurrentPageView(startPage);
+        validateActiveRoleView();
+    }
+}
+
+function validateActiveRoleView() {
+    const activePages = document.querySelectorAll('.page.active-page');
+    if (activePages.length !== 1) console.error('Invalid active page count:', activePages.length);
+    const sharedIds = ['teacher-attendance-view', 'admin-attendance-view', 'student-attendance-view', 'parent-attendance-view', 'teacher-homework-view', 'admin-homework-view', 'student-homework-view', 'parent-homework-view', 'teacher-marks-view', 'admin-marks-view', 'student-marks-view', 'parent-marks-view', 'report-manager', 'report-reader', 'admin-fees-view', 'parent-fees-view', 'teacher-quiz-view', 'student-quiz-view'];
+    const visible = sharedIds.filter((id) => { const element = document.getElementById(id); return element && !element.classList.contains('hidden'); });
+    const sharedPage = ['attendance', 'homework', 'marks', 'reports', 'fees', 'questions'].some((page) => document.getElementById(`page-${page}`)?.classList.contains('active-page'));
+    if (sharedPage && visible.length > 1) console.warn('Multiple role subviews visible:', visible);
+}
+
 // Unified Role View Dispatcher
 function applyRoleView() {
+    hideAllRoleSubviews();
     applySchoolSettings();
 
     if (currentRole === 'admin') {
@@ -1576,7 +1731,7 @@ function renderParentDashboard() {
 
     // Fee balance
     const invoices = getStudentInvoices(child.id);
-    const pendingTotal = invoices.filter((inv) => inv.status !== 'Paid' && !paymentRecords.some((p) => getPaymentInvoiceIds(p).includes(inv.invoiceId) && p.studentId === child.id)).reduce((sum, inv) => sum + Number(inv.amount), 0);
+    const pendingTotal = invoices.reduce((sum, invoice) => sum + getInvoiceBalance(invoice), 0);
     const feeBadge = document.getElementById('parent-dashboard-fee-status');
     const feeText = document.getElementById('parent-dashboard-fee-text');
     if (!invoices.length) {
@@ -1606,17 +1761,17 @@ function renderParentDashboard() {
         hwPreview.innerHTML = '<p class="muted">No pending homework assignments.</p>';
     }
 
-    const publishedReports = marksRecords.some((mark) => mark.studentId === child.id && mark.status === 'Published');
     const reportBadge = document.getElementById('parent-dashboard-report-badge');
     const reportText = document.getElementById('parent-dashboard-report-text');
-    if (!publishedReports) {
+    const publishedReport = reportCards.filter((card) => card.studentId === child.id && card.status === 'Published').sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))[0];
+    if (!publishedReport) {
         reportBadge.textContent = 'Unavailable';
         reportBadge.className = 'status info';
-        reportText.textContent = 'No report cards available.';
+        reportText.textContent = 'Report Card is not yet published.';
     } else {
         reportBadge.textContent = 'Available';
         reportBadge.className = 'status paid';
-        reportText.textContent = 'Published school marks and evaluations';
+        reportText.textContent = `${publishedReport.exam} · ${publishedReport.academicYearId}${publishedReport.publishedAt ? ` · Published ${new Date(publishedReport.publishedAt).toLocaleDateString('en-GB')}` : ''}`;
     }
 
     const alerts = [];
@@ -1625,9 +1780,9 @@ function renderParentDashboard() {
     if (todayRec?.dailyResult === 'Half Day') alerts.push(['Attention', `${child.name} has a half-day attendance record today.`]);
     if (todayRec?.dailyResult === 'Leave') alerts.push(['Information', `Leave was recorded for ${child.name} today.`]);
     if (!classHw.length) alerts.push(['Information', 'No assigned homework.']);
-    const pendingInvoices = invoices.filter((invoice) => invoice.status !== 'Paid' && !paymentRecords.some((payment) => payment.invoiceId === invoice.invoiceId && payment.studentId === child.id));
+    const pendingInvoices = invoices.filter((invoice) => getInvoiceBalance(invoice) > 0);
     if (pendingInvoices.some((invoice) => invoice.dueDate < todayISO)) alerts.push(['Urgent', 'A fee invoice is overdue.']);
-    else if (pendingInvoices.length) alerts.push(['Attention', `${pendingInvoices.length} fee invoice${pendingInvoices.length === 1 ? '' : 's'} need attention.`]);
+    else if (pendingTotal > 0) alerts.push(['Attention', `₹${pendingTotal.toLocaleString('en-IN')} in fees need attention.`]);
     const alertsContainer = document.getElementById('parent-dashboard-alerts');
     if (alertsContainer) alertsContainer.innerHTML = alerts.length ? alerts.map(([severity, text]) => `<div class="dashboard-alert ${severity.toLowerCase()}"><strong>${escapeHtml(severity)}</strong><span>${escapeHtml(text)}</span></div>`).join('') : '<p class="muted">No immediate follow-up needed.</p>';
 
@@ -1669,20 +1824,23 @@ function renderAdminDashboard() {
         const todayStaff = Array.isArray(staffAttendanceRecords) ? staffAttendanceRecords.filter((record) => record.date === todayISO) : [];
         setText('admin-teachers-present', todayStaff.filter((record) => record.status === 'Present').length); setText('admin-teachers-absent', todayStaff.filter((record) => record.status === 'Absent').length); setText('admin-teachers-leave', todayStaff.filter((record) => record.status === 'Leave').length); setText('admin-marks-awaiting', safeMarks.filter((mark) => mark.status === 'Submitted For Verification').length); setText('admin-open-complaints', safeComplaints.filter((complaint) => !['Resolved', 'Closed'].includes(complaint.status)).length); setText('admin-urgent-complaints', safeComplaints.filter((complaint) => complaint.priority === 'Urgent' && !['Resolved', 'Closed'].includes(complaint.status)).length); setText('admin-meetings-today', safeMeetings.filter((meeting) => meeting.preferredDate === todayISO).length);
         const overview = document.getElementById('admin-class-performance-overview');
-        if (overview) overview.innerHTML = activeClassesList.map((schoolClass) => { const classStudents = safeStudents.filter((student) => student.classId === schoolClass.id && student.status === 'Active'); const classAttendance = safeAttendance.filter((record) => record.classId === schoolClass.id && record.date === todayISO); const publishedCount = safeMarks.filter((mark) => mark.classId === schoolClass.id && mark.status === 'Published').length; const classMarks = safeMarks.filter((mark) => mark.classId === schoolClass.id); const billed = safeInvoices.filter((invoice) => invoice.classId === schoolClass.id).reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0); const collected = safePayments.filter((payment) => payment.allocations?.some((allocation) => safeInvoices.find((invoice) => invoice.invoiceId === allocation.invoiceId)?.classId === schoolClass.id)).reduce((sum, payment) => sum + Number(payment.totalAmount || payment.amount || 0), 0); const open = safeComplaints.filter((complaint) => getStudentClassId(complaint.studentId) === schoolClass.id && !['Resolved', 'Closed'].includes(complaint.status)).length; return `<div class="account-row"><div><b>${escapeHtml(schoolClass.name)}-${escapeHtml(schoolClass.section)}</b><small>Attendance: ${classAttendance.length && classStudents.length ? `${Math.round((classAttendance.filter((record) => record.dailyResult === 'Full Day').length / classStudents.length) * 100)}%` : 'No data'} · Published results: ${publishedCount}/${classMarks.length || 0} · Fees: ${billed ? `${Math.round((collected / billed) * 100)}%` : 'No data'} · Open complaints: ${open}</small></div></div>`; }).join('') || '<p class="muted">No class performance data available.</p>';
+        if (overview) overview.innerHTML = activeClassesList.map((schoolClass) => { const classStudents = safeStudents.filter((student) => student.classId === schoolClass.id && student.status === 'Active'); const classAttendance = safeAttendance.filter((record) => record.classId === schoolClass.id && record.date === todayISO); const fullDays = classAttendance.filter((record) => record.dailyResult === 'Full Day').length; const halfDays = classAttendance.filter((record) => record.dailyResult === 'Half Day').length; const publishedCount = safeMarks.filter((mark) => mark.classId === schoolClass.id && mark.status === 'Published').length; const classMarks = safeMarks.filter((mark) => mark.classId === schoolClass.id); const billed = safeInvoices.filter((invoice) => invoice.classId === schoolClass.id).reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0); const collected = safePayments.reduce((sum, payment) => sum + (payment.allocations || []).filter((allocation) => safeInvoices.find((invoice) => invoice.invoiceId === allocation.invoiceId)?.classId === schoolClass.id).reduce((allocationSum, allocation) => allocationSum + Number(allocation.amountApplied || 0), 0), 0); const open = safeComplaints.filter((complaint) => getStudentClassId(complaint.studentId) === schoolClass.id && !['Resolved', 'Closed'].includes(complaint.status)).length; return `<div class="account-row"><div><b>${escapeHtml(schoolClass.name)}-${escapeHtml(schoolClass.section)}</b><small>Attendance: ${classStudents.length ? `${Math.round(((fullDays + halfDays * 0.5) / classStudents.length) * 100)}%` : 'No data'} · Published results: ${publishedCount}/${classMarks.length || 0} · Fees: ${billed ? `${Math.round((collected / billed) * 100)}%` : 'No data'} · Open complaints: ${open}</small></div></div>`; }).join('') || '<p class="muted">No class performance data available.</p>';
     });
 
     // Today's attendance calculation
     const todayRecords = safeAttendance.filter((record) => record.date === todayISO);
     const classesWithAttendance = new Set(todayRecords.map((r) => r.classId));
-    const attendanceRate = todayRecords.length ? Math.round((todayRecords.filter((r) => (r.dailyResult || r.status) === 'Full Day').length / todayRecords.length) * 100) : 0;
+    const fullDays = todayRecords.filter((record) => record.dailyResult === 'Full Day').length;
+    const halfDays = todayRecords.filter((record) => record.dailyResult === 'Half Day').length;
+    const attendedDayEquivalents = fullDays + halfDays * 0.5;
+    const attendanceRate = todayRecords.length ? Math.round((attendedDayEquivalents / todayRecords.length) * 100) : 0;
 
     setText('admin-attendance-rate', `${attendanceRate}%`); setText('admin-attendance-status-label', `Submitted by ${classesWithAttendance.size} / ${activeClassesList.length} classes`);
 
     // Financial Totals
     const paidSum = safePayments.reduce((sum, p) => sum + getPaymentTotal(p), 0);
     const billedSum = safeInvoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-    const pendingSum = Math.max(0, billedSum - paidSum);
+    const pendingSum = safeInvoices.reduce((sum, invoice) => sum + getInvoiceBalance(invoice), 0);
 
     setText('admin-fees-collected', `₹${paidSum.toLocaleString('en-IN')}`);
     setText('admin-fees-pending', `₹${pendingSum.toLocaleString('en-IN')}`);
@@ -1698,44 +1856,17 @@ function renderAdminDashboard() {
         }).join(''); } else element.innerHTML = '<p class="muted">No payment transactions recorded yet.</p>'; });
 
     // Panel 3: Fee Defaulters Preview
-    const defaultersEl = document.getElementById('admin-defaulters-preview');
-    const overdueInvoices = feeInvoices.filter((inv) => inv.dueDate < todayISO && inv.status !== 'Paid' && !paymentRecords.some((p) => getPaymentInvoiceIds(p).includes(inv.invoiceId) && p.studentId === inv.studentId));
-    if (overdueInvoices.length) {
-        defaultersEl.innerHTML = overdueInvoices.slice(0, 3).map((inv) => `<div><b>${escapeHtml(inv.studentName)}</b><span>₹${Number(inv.amount).toLocaleString('en-IN')} overdue since ${escapeHtml(inv.dueDate)}</span></div>`).join('');
-    } else {
-        defaultersEl.innerHTML = '<p class="muted">No overdue fee balances recorded.</p>';
-    }
+    renderSection('defaulters', () => { const defaultersEl = document.getElementById('admin-defaulters-preview'); if (!defaultersEl) return; const overdueInvoices = safeInvoices.filter((inv) => inv && inv.dueDate < todayISO && getInvoiceBalance(inv) > 0); defaultersEl.innerHTML = overdueInvoices.length ? overdueInvoices.slice(0, 3).map((inv) => `<div><b>${escapeHtml(inv.studentName)}</b><span>₹${getInvoiceBalance(inv).toLocaleString('en-IN')} overdue since ${escapeHtml(inv.dueDate)}</span></div>`).join('') : '<p class="muted">No overdue fee balances recorded.</p>'; });
 
     // Panel 4: Pending Admissions
     const admissionsEl = document.getElementById('admin-admissions-list');
-    const pendingStudents = students.filter((s) => s.status === 'Pending');
-    if (pendingStudents.length) {
-        admissionsEl.innerHTML = pendingStudents.map((s) => `<div><b>${escapeHtml(s.name)}</b><span>${escapeHtml(s.className)}-${escapeHtml(s.section)} · Parent: ${escapeHtml(s.parentName)}</span></div>`).join('');
-    } else {
-        admissionsEl.innerHTML = '<p class="muted">No pending admission applications.</p>';
-    }
+    renderSection('pending admissions', () => { const admissionsEl = document.getElementById('admin-admissions-list'); if (!admissionsEl) return; const pendingStudents = safeStudents.filter((s) => s && s.status === 'Pending'); admissionsEl.innerHTML = pendingStudents.length ? pendingStudents.map((s) => `<div><b>${escapeHtml(s.name)}</b><span>${escapeHtml(s.className)}-${escapeHtml(s.section)} · Parent: ${escapeHtml(s.parentName)}</span></div>`).join('') : '<p class="muted">No pending admission applications.</p>'; });
 
     // Panel 5: Pending Report-card Publication
-    const pendingReportsEl = document.getElementById('admin-pending-reports-list');
-    const draftMarks = marksRecords.filter((m) => m.status === 'Draft');
-    if (draftMarks.length) {
-        const draftSubjects = [...new Set(draftMarks.map((m) => `${m.exam} - ${m.subject}`))];
-        pendingReportsEl.innerHTML = draftSubjects.map((sub) => `<div><b>${escapeHtml(sub)}</b><span>Draft scores waiting for final review</span></div>`).join('');
-    } else {
-        pendingReportsEl.innerHTML = '<p class="muted">All entered marks are published.</p>';
-    }
+    renderSection('pending report cards', () => { const pendingReportsEl = document.getElementById('admin-pending-reports-list'); if (!pendingReportsEl) return; const pendingReports = (Array.isArray(reportCards) ? reportCards : []).filter((card) => ['In Preparation', 'Ready For Class Teacher Review', 'Verified'].includes(card.status)); pendingReportsEl.innerHTML = pendingReports.length ? pendingReports.map((card) => `<div><b>${escapeHtml(card.exam)} · ${escapeHtml(students.find((student) => student.id === card.studentId)?.name || card.studentId)}</b><span>${escapeHtml(card.status)}</span></div>`).join('') : '<p class="muted">No Report Cards are awaiting publication.</p>'; });
 
     // Panel 6: Recent Notices
-    const noticesEl = document.getElementById('admin-recent-notices-list');
-    if (notificationRecords.length) {
-        noticesEl.innerHTML = notificationRecords.slice(-3).reverse().map((n) => `<div><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.type)} · Audience: ${escapeHtml(n.audience)}</span></div>`).join('');
-    } else {
-        noticesEl.innerHTML = '<p class="muted">No announcements published.</p>';
-    }
-    const openComplaints = complaints.filter((complaint) => !['Resolved', 'Closed'].includes(complaint.status));
-    const urgentComplaints = openComplaints.filter((complaint) => complaint.priority === 'Urgent');
-    const complaintSummary = document.getElementById('admin-recent-notices-list');
-    if (complaintSummary && (openComplaints.length || urgentComplaints.length)) complaintSummary.innerHTML += `<div><b>${openComplaints.length} open complaints</b><span>${urgentComplaints.length} urgent · <button class="text-button" type="button" onclick="showPage('complaints')">Review complaints</button></span></div>`;
+    renderSection('recent notices', () => { const noticesEl = document.getElementById('admin-recent-notices-list'); if (!noticesEl) return; noticesEl.innerHTML = safeNotifications.length ? safeNotifications.slice(-3).reverse().map((n) => `<div><b>${escapeHtml(n.title)}</b><span>${escapeHtml(n.type)} · Audience: ${escapeHtml(n.audience)}</span></div>`).join('') : '<p class="muted">No announcements published.</p>'; });
 }
 
 document.getElementById('teacher-self-attendance-form')?.addEventListener('submit', (event) => { event.preventDefault(); const teacher = getLoggedInTeacherProfile(); const date = document.getElementById('teacher-self-attendance-date').value; if (!teacher || currentRole !== 'teacher') return; if (date !== todayISO) { showMessage('teacher-self-attendance-message', 'Teachers cannot backdate attendance. Ask Admin for a correction.', 'error'); return; } const existing = staffAttendanceRecords.find((record) => record.teacherId === teacher.id && record.date === date); const status = document.getElementById('teacher-self-attendance-status').value; const data = { id: existing?.id || createUniqueId('staff-attendance'), teacherId: teacher.id, date, status, markedByAccountId: currentAccount.id, submittedAt: new Date().toISOString(), correctedBy: existing?.correctedBy || null, correctionReason: existing?.correctionReason || '' }; if (existing) Object.assign(existing, data); else staffAttendanceRecords.push(data); saveStore('staffAttendance', staffAttendanceRecords); showMessage('teacher-self-attendance-message', 'Your attendance was submitted.'); renderAdminDashboard(); });
@@ -1758,7 +1889,7 @@ function renderAdminStudentsTable() {
         const attRate = summary.workingDays ? `${summary.percentage}% (${summary.attendedDayEquivalents}/${summary.workingDays})` : 'No data';
 
         const invoices = getStudentInvoices(s.id);
-        const pendingFee = invoices.filter((inv) => inv.status !== 'Paid' && !paymentRecords.some((p) => getPaymentInvoiceIds(p).includes(inv.invoiceId) && p.studentId === s.id)).reduce((sum, inv) => sum + Number(inv.amount), 0);
+        const pendingFee = invoices.filter((inv) => getInvoiceBalance(inv) > 0).reduce((sum, inv) => sum + getInvoiceBalance(inv), 0);
 
         return `<tr>
             <td><b>${escapeHtml(s.name)}</b><br><small class="muted">Roll: ${escapeHtml(s.roll)}</small></td>
@@ -1792,7 +1923,7 @@ function viewStudentProfile(studentId) {
     const attRate = attendanceSummary.percentage;
 
     const invoices = getStudentInvoices(student.id);
-    const pendingTotal = invoices.filter((inv) => inv.status !== 'Paid' && !paymentRecords.some((p) => getPaymentInvoiceIds(p).includes(inv.invoiceId) && p.studentId === student.id)).reduce((sum, inv) => sum + Number(inv.amount), 0);
+    const pendingTotal = invoices.reduce((sum, invoice) => sum + getInvoiceBalance(invoice), 0);
 
     content.innerHTML = `
         <div class="two-column">
@@ -2273,7 +2404,7 @@ function renderClassesList() {
         return `<div class="account-row">
             <div>
                 <b>${escapeHtml(c.name)} · Section ${escapeHtml(c.section)}</b>
-                <small>Class Teacher: ${escapeHtml(c.teacherName)} · Enrolled Students: ${studentCount}</small>
+                <small>Class Teacher: ${escapeHtml(c.classTeacherName || 'Unassigned')} · Enrolled Students: ${studentCount}</small>
             </div>
             <span class="status ${c.active ? 'active' : 'inactive'}">${c.active ? 'Active' : 'Inactive'}</span>
         </div>`;
@@ -2310,7 +2441,7 @@ function renderSubjectAllocationList() {
 }
 
 document.getElementById('allocation-class')?.addEventListener('change', () => { const classId = document.getElementById('allocation-class').value; const select = document.getElementById('allocation-subject'); select.innerHTML = subjectsForClass(classId).map((subject) => `<option>${escapeHtml(subject)}</option>`).join(''); const schoolClass = classes.find((item) => item.id === classId); const classTeacher = document.getElementById('allocation-class-teacher'); if (classTeacher) classTeacher.value = schoolClass?.classTeacherId || ''; });
-document.getElementById('subject-allocation-form')?.addEventListener('submit', (event) => { event.preventDefault(); const classId = document.getElementById('allocation-class').value; const subject = document.getElementById('allocation-subject').value; const teacherId = document.getElementById('allocation-teacher').value; const classTeacherId = document.getElementById('allocation-class-teacher').value; const teacher = teachers.find((item) => item.id === teacherId); const classTeacher = teachers.find((item) => item.id === classTeacherId); const academicYearId = document.getElementById('allocation-academic-year').value || currentAcademicYear()?.id || defaultAcademicYearId; const schoolClass = classes.find((item) => item.id === classId); if (schoolClass) { schoolClass.classTeacherId = classTeacherId || null; schoolClass.classTeacherName = classTeacher?.name || 'Unassigned'; schoolClass.teacherId = schoolClass.classTeacherId; schoolClass.teacherName = schoolClass.classTeacherName; } const existing = subjectAllocations.find((item) => item.academicYearId === academicYearId && item.classId === classId && item.subject === subject); if (existing) { existing.teacherId = teacherId; existing.teacherName = teacher?.name || 'Unassigned'; existing.updatedAt = new Date().toISOString(); } else subjectAllocations.push({ id: createUniqueId('allocation'), academicYearId, classId, subject, teacherId, teacherName: teacher?.name || 'Unassigned', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); saveStore('classes', classes); saveStore('subjectAllocations', subjectAllocations); document.getElementById('allocation-message').textContent = 'Class teacher and subject allocation saved.'; document.getElementById('allocation-message').className = 'form-message'; renderSubjectAllocationList(); renderClassesList(); renderAdminDashboard(); });
+document.getElementById('subject-allocation-form')?.addEventListener('submit', (event) => { event.preventDefault(); const classId = document.getElementById('allocation-class').value; const subject = document.getElementById('allocation-subject').value; const teacherId = document.getElementById('allocation-teacher').value; const classTeacherId = document.getElementById('allocation-class-teacher').value; const teacher = teachers.find((item) => item.id === teacherId); const classTeacher = teachers.find((item) => item.id === classTeacherId); const academicYearId = document.getElementById('allocation-academic-year').value || currentAcademicYear()?.id || defaultAcademicYearId; const schoolClass = classes.find((item) => item.id === classId); if (schoolClass) { schoolClass.classTeacherId = classTeacherId || null; schoolClass.classTeacherName = classTeacher?.name || 'Unassigned'; } const existing = subjectAllocations.find((item) => item.academicYearId === academicYearId && item.classId === classId && item.subject === subject); if (existing) { existing.teacherId = teacherId; existing.teacherName = teacher?.name || 'Unassigned'; existing.updatedAt = new Date().toISOString(); } else subjectAllocations.push({ id: createUniqueId('allocation'), academicYearId, classId, subject, teacherId, teacherName: teacher?.name || 'Unassigned', active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); saveStore('classes', classes); saveStore('subjectAllocations', subjectAllocations); document.getElementById('allocation-message').textContent = 'Class teacher and subject allocation saved.'; document.getElementById('allocation-message').className = 'form-message'; renderSubjectAllocationList(); renderClassesList(); renderAdminDashboard(); });
 
 document.getElementById('class-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -2330,8 +2461,6 @@ document.getElementById('class-form')?.addEventListener('submit', (event) => {
         id: `c-${name.toLowerCase().replace(/\s+/g, '')}-${section.toLowerCase()}`,
         name,
         section,
-        teacherId: teacher ? teacher.id : null,
-        teacherName: teacher ? teacher.name : 'Unassigned',
         classTeacherId: teacher ? teacher.id : null,
         classTeacherName: teacher ? teacher.name : 'Unassigned',
         gradeNumber,
@@ -2373,14 +2502,14 @@ function renderTeacherAttendanceRoster() {
     const date = dateInput.value;
 
     if (currentRole === 'teacher' && !isClassTeacherForClass(currentAccount.teacherId, classId)) {
-        rosterTbody.innerHTML = '<tr><td colspan="3" class="muted">You do not have access to this class roster.</td></tr>';
+        rosterTbody.innerHTML = '<tr><td colspan="5" class="muted">You do not have access to this class roster.</td></tr>';
         return;
     }
 
     const classStudents = students.filter((s) => s.classId === classId && s.status === 'Active');
 
     if (!classStudents.length) {
-        rosterTbody.innerHTML = '<tr><td colspan="3" class="muted">No active students enrolled in this section.</td></tr>';
+        rosterTbody.innerHTML = '<tr><td colspan="5" class="muted">No active students enrolled in this section.</td></tr>';
         return;
     }
 
@@ -2454,8 +2583,6 @@ document.getElementById('teacher-attendance-form')?.addEventListener('submit', (
             dailyResult,
             markedByTeacherId: currentAccount?.teacherId || null,
             markedByAccountId: currentAccount?.id || null,
-            teacher: currentAccount ? currentAccount.name : 'Teacher',
-            reason: correctionReason,
             correctionReason: changed ? correctionReason : existing?.correctionReason || '',
             correctedBy: changed ? currentAccount?.id || null : existing?.correctedBy || null,
             correctedAt: changed ? new Date().toISOString() : existing?.correctedAt || null,
@@ -2531,7 +2658,7 @@ function renderStudentAttendance() {
 
     document.getElementById('student-att-rate').textContent = `${rate}%`;
     document.getElementById('student-att-days').textContent = `${summary.fullDays} full / ${summary.workingDays} working days`;
-    document.getElementById('student-att-late').textContent = summary.halfDays;
+    document.getElementById('student-att-half-days').textContent = summary.halfDays;
     document.getElementById('student-att-absent').textContent = summary.absentDays;
 
     const tbody = document.querySelector('#student-attendance-table tbody');
@@ -2544,8 +2671,8 @@ function renderStudentAttendance() {
             <td>${escapeHtml(r.date)}</td>
             <td>${d.toLocaleDateString('en-GB', { weekday: 'long' })}</td>
             <td>${escapeHtml(r.morningStatus || '—')}</td><td>${escapeHtml(r.afternoonStatus || '—')}</td><td>${escapeHtml(r.dailyResult || '—')}</td>
-            <td>${escapeHtml(r.teacher)}</td>
-            <td>${escapeHtml(r.reason || '—')}</td>
+            <td>${escapeHtml(getAttendanceMarkerName(r))}</td>
+            <td>${escapeHtml(r.correctionReason || '—')}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="7" class="muted">No attendance history recorded yet.</td></tr>';
 }
@@ -2561,7 +2688,8 @@ function renderParentAttendance() {
     document.getElementById('parent-att-rate').textContent = `${rate}%`;
     document.getElementById('parent-att-name').textContent = child.name;
     document.getElementById('parent-att-days').textContent = `${summary.fullDays} full / ${summary.workingDays} working`;
-    document.getElementById('parent-att-late').textContent = `${summary.halfDays} half · ${summary.leaveDays} leave`;
+    document.getElementById('parent-att-half-days').textContent = summary.halfDays;
+    document.getElementById('parent-att-leave-days').textContent = `Leave days: ${summary.leaveDays}`;
 
     const todayRec = records.find((r) => r.date === todayISO);
     document.getElementById('parent-att-today-text').textContent = todayRec?.dailyResult || 'Attendance not marked';
@@ -2575,8 +2703,8 @@ function renderParentAttendance() {
             <td>${escapeHtml(r.date)}</td>
             <td>${d.toLocaleDateString('en-GB', { weekday: 'long' })}</td>
             <td>${escapeHtml(r.morningStatus || '—')}</td><td>${escapeHtml(r.afternoonStatus || '—')}</td><td>${escapeHtml(r.dailyResult || '—')}</td>
-            <td>${escapeHtml(r.teacher || 'Class Teacher')}</td>
-            <td>${escapeHtml(r.reason || '—')}</td>
+            <td>${escapeHtml(getAttendanceMarkerName(r))}</td>
+            <td>${escapeHtml(r.correctionReason || '—')}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="7" class="muted">No attendance logs available for this child.</td></tr>';
 }
@@ -2588,7 +2716,7 @@ function renderTeacherHomeworkList() {
     const classDropdown = document.getElementById('homework-class');
     if (!list) return;
 
-    const teacherClasses = getClassTeacherClasses(currentAccount?.teacherId);
+    const teacherClasses = getTeacherClasses();
 
     if (filterSelect) {
         const currentVal = filterSelect.value;
@@ -2788,6 +2916,8 @@ function renderStudentHomework() {
     const student = getCurrentStudent();
     const list = document.getElementById('student-homework-list');
     if (!student || !list) return;
+    const message = document.getElementById('student-homework-message');
+    if (message) { message.textContent = ''; message.className = 'form-message'; }
 
     document.getElementById('student-hw-class-badge').textContent = `${student.className}-${student.section}`;
     const studentClassHw = homeworkRecords.filter((h) => h.classId === student.classId && h.status === 'Published');
@@ -2814,6 +2944,8 @@ function renderStudentHomework() {
                     ${sub.feedback ? `<p style="margin-top:4px;"><b>Teacher Feedback:</b> ${escapeHtml(sub.feedback)}</p>` : ''}
                     ${!isPastDue ? `<button class="text-button" type="button" style="margin-top:6px;" onclick="reEditStudentSubmission('${hw.id}')">Edit submission</button>` : ''}
                 </div>
+            ` : isPastDue ? `
+                <p class="form-message error">Submission closed. The due date has passed.</p>
             ` : `
                 <form class="homework-submit-form" onsubmit="submitStudentHomework(event, '${hw.id}')">
                     <input name="response" required placeholder="Type your answer or response...">
@@ -2828,23 +2960,35 @@ function renderStudentHomework() {
 function submitStudentHomework(event, hwId) {
     event.preventDefault();
     const student = getCurrentStudent();
-    const hw = homeworkRecords.find((h) => h.id === hwId);
-    if (!student || !hw) return;
+    const hw = homeworkRecords.find((item) => item.id === hwId);
+    const message = document.getElementById('student-homework-message');
+
+    if (currentRole !== 'student' || !student || !hw || hw.classId !== student.classId || hw.status !== 'Published') return;
+    if (todayISO > hw.dueDate) {
+        showMessage('student-homework-message', 'This homework is past its due date and cannot be submitted.', 'error');
+        return;
+    }
 
     const response = event.target.response.value.trim();
     const attachmentName = event.target.attachmentName.value.trim();
+    if (!response) {
+        showMessage('student-homework-message', 'Enter a response before submitting.', 'error');
+        return;
+    }
 
     if (!hw.submissions) hw.submissions = [];
     const existingIndex = hw.submissions.findIndex((s) => s.studentId === student.id);
+    const existing = existingIndex >= 0 ? hw.submissions[existingIndex] : null;
 
     const subData = {
         studentId: student.id,
         studentName: student.name,
         response,
         attachmentName,
-        submittedAt: new Date().toISOString(),
-        status: todayISO > hw.dueDate ? 'Late' : 'Submitted',
-        feedback: ''
+        submittedAt: existing?.submittedAt || new Date().toISOString(),
+        editedAt: existing ? new Date().toISOString() : null,
+        status: existing?.status === 'Reviewed' ? 'Reviewed' : 'Submitted',
+        feedback: existing?.feedback || ''
     };
 
     if (existingIndex >= 0) {
@@ -2856,18 +3000,28 @@ function submitStudentHomework(event, hwId) {
     saveStore('homework', homeworkRecords);
     renderStudentHomework();
     renderStudentDashboard();
+    showMessage('student-homework-message', existing ? 'Homework submission updated successfully.' : 'Homework submitted successfully.');
 }
 
 function reEditStudentSubmission(hwId) {
+    if (currentRole !== 'student') return;
     const student = getCurrentStudent();
     const hw = homeworkRecords.find((h) => h.id === hwId);
-    if (!student || !hw) return;
+    if (!student || !hw || hw.classId !== student.classId || hw.status !== 'Published' || todayISO > hw.dueDate) {
+        showMessage('student-homework-message', 'This homework cannot be edited.', 'error');
+        return;
+    }
     const sub = hw.submissions.find((s) => s.studentId === student.id);
     if (!sub) return;
 
     const newResponse = window.prompt('Update your assignment submission response:', sub.response);
     if (newResponse !== null) {
+        if (!newResponse.trim()) {
+            showMessage('student-homework-message', 'Enter a response before saving.', 'error');
+            return;
+        }
         sub.response = newResponse.trim();
+        sub.editedAt = new Date().toISOString();
         saveStore('homework', homeworkRecords);
         renderStudentHomework();
     }
@@ -2967,7 +3121,7 @@ function loadTeacherMarksRoster() {
     if (subjectSelect) {
         const allocatedSubjects = getTeacherSubjectsForClass(currentAccount?.teacherId, classSelect.value);
         const currentSub = subjectSelect.value;
-        if (subjectSelect.options.length === 0 || !teacherCanAccessSubject(currentSub)) {
+        if (subjectSelect.options.length === 0 || !teacherCanManageSubject(classSelect.value, currentSub)) {
             subjectSelect.innerHTML = allocatedSubjects.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
             if (allocatedSubjects.includes(currentSub)) {
                 subjectSelect.value = currentSub;
@@ -3062,27 +3216,22 @@ function saveMarks(mode = 'Draft') {
         return;
     }
 
-    let hasErrors = false;
+    const pendingChanges = [];
+    let validationError = '';
     rows.forEach((row) => {
+        if (validationError) return;
         const input = row.querySelector('.mark-input');
         const scoreVal = input ? input.value.trim() : '';
         if (scoreVal === '' || Number(scoreVal) < 0 || Number(scoreVal) > maxMarks) {
-            hasErrors = true;
+            validationError = `Please enter valid marks from 0 to ${maxMarks} for all students.`;
+            return;
         }
-    });
-
-    if (hasErrors) {
-        if (msg) {
-            msg.textContent = `Please enter valid marks from 0 to ${maxMarks} for all students.`;
-            msg.className = 'form-message error';
-        }
-        return;
-    }
-
-    rows.forEach((row) => {
         const studentId = row.dataset.studentId;
         const student = students.find((s) => s.id === studentId);
-        if (currentRole === 'teacher' && (!student || !teacherCanManageSubject(classId, subject))) return;
+        if (!student) {
+            validationError = 'A roster student could not be resolved.';
+            return;
+        }
 
         const studentName = row.dataset.studentName;
         const score = Number(row.querySelector('.mark-input').value);
@@ -3093,20 +3242,28 @@ function saveMarks(mode = 'Draft') {
         const markId = `m_${studentId}_${classId}_${subject}_${academicYearId}_${exam}`;
         const existingIdx = marksRecords.findIndex((m) => m.id === markId || (m.studentId === studentId && m.classId === classId && m.subject === subject && m.exam === exam && (m.academicYearId || defaultAcademicYearId) === academicYearId));
         const existingMark = existingIdx >= 0 ? marksRecords[existingIdx] : null;
-        let amendments = existingMark?.amendments || [];
-        if (isClassTeacher() && existingMark && Number(existingMark.score) !== score) {
+        if (existingMark?.status === 'Published') {
+            validationError = 'Published marks are read-only.';
+            return;
+        }
+        let amendment = null;
+        if (isClassTeacher() && isClassTeacherForClass(currentAccount?.teacherId, classId) && existingMark && Number(existingMark.score) !== score) {
             const amendmentReason = window.prompt('Enter the reason for correcting this mark:');
             if (!amendmentReason?.trim()) {
-                showMessage('marks-message', 'A correction reason is required when changing a submitted mark.', 'error');
+                validationError = 'A correction reason is required when changing a submitted mark.';
                 return;
             }
-            amendments = [...amendments, { originalScore: existingMark.score, amendedScore: score, amendedBy: currentAccount.teacherId, amendedAt: new Date().toISOString(), amendmentReason: amendmentReason.trim() }];
+            amendment = { originalScore: existingMark.score, amendedScore: score, amendedBy: currentAccount.teacherId, amendedAt: new Date().toISOString(), amendmentReason: amendmentReason.trim() };
         }
 
-        const markData = {
+        const statusHistory = [...(existingMark?.statusHistory || [])];
+        if (existingMark && existingMark.status !== requestedStatus) {
+            statusHistory.push({ from: existingMark.status, to: requestedStatus, changedBy: currentAccount?.teacherId || currentAccount?.id || null, changedAt: new Date().toISOString(), reason: existingMark.rejectionReason || '' });
+        }
+        pendingChanges.push({ existingIdx, existingMark, markData: {
             id: markId,
             academicYearId,
-                studentId,
+            studentId,
             studentName,
             classId,
             subject,
@@ -3115,22 +3272,33 @@ function saveMarks(mode = 'Draft') {
             score,
             percentage,
             grade,
-            status: requestedStatus,
-            enteredByTeacherId: currentRole === 'teacher' ? currentAccount.teacherId : null,
-            submittedAt: requestedStatus === 'Submitted For Verification' ? new Date().toISOString() : existingIdx >= 0 ? marksRecords[existingIdx].submittedAt : null,
-            amendments,
+            status: requestedStatus === 'Draft' && existingMark?.status === 'Rejected' ? 'Draft' : requestedStatus,
+            enteredByTeacherId: existingMark?.enteredByTeacherId || (currentRole === 'teacher' ? currentAccount.teacherId : null),
+            submittedAt: requestedStatus === 'Submitted For Verification' ? new Date().toISOString() : existingMark?.submittedAt || null,
+            verifiedByTeacherId: existingMark?.verifiedByTeacherId || null,
+            verifiedAt: existingMark?.verifiedAt || null,
+            rejectedByTeacherId: existingMark?.rejectedByTeacherId || null,
+            rejectedAt: existingMark?.rejectedAt || null,
+            rejectionReason: existingMark?.rejectionReason || '',
+            publishedByTeacherId: existingMark?.publishedByTeacherId || null,
+            publishedAt: existingMark?.publishedAt || null,
+            amendments: [...(existingMark?.amendments || []), ...(amendment ? [amendment] : [])],
+            statusHistory,
             savedAt: new Date().toISOString()
-        };
+        }});
+    });
 
-        if (existingIdx >= 0) {
-            marksRecords[existingIdx] = markData;
-        } else {
-            marksRecords.push(markData);
-        }
+    if (validationError) {
+        if (msg) { msg.textContent = validationError; msg.className = 'form-message error'; }
+        return;
+    }
+
+    pendingChanges.forEach(({ existingIdx, markData }) => {
+        if (existingIdx >= 0) marksRecords[existingIdx] = markData;
+        else marksRecords.push(markData);
     });
 
     saveStore('marks', marksRecords);
-
     if (msg) {
         msg.textContent = `Marks for ${subject} (${exam}) successfully saved as ${mode}.`;
         msg.className = 'form-message';
@@ -3138,6 +3306,48 @@ function saveMarks(mode = 'Draft') {
 
     renderAdminDashboard();
     renderTeacherDashboard();
+    renderTeacherMarksVerificationQueue();
+}
+
+function getMarksVerificationGroup(classId, subject, exam, academicYearId) {
+    return marksRecords.filter((record) => record.classId === classId && record.subject === subject && record.exam === exam && (record.academicYearId || defaultAcademicYearId) === academicYearId);
+}
+
+function renderTeacherMarksVerificationQueue() {
+    const panel = document.getElementById('teacher-verification-panel');
+    const list = document.getElementById('teacher-verification-list');
+    if (!panel || !list || currentRole !== 'teacher' || !teacherHasClassTeacherResponsibility()) { panel?.classList.add('hidden'); return; }
+    const yearId = currentAcademicYear()?.id || defaultAcademicYearId;
+    const pending = marksRecords.filter((record) => record.status === 'Submitted For Verification' && (record.academicYearId || defaultAcademicYearId) === yearId && isClassTeacherForClass(currentAccount.teacherId, record.classId) && students.some((student) => student.id === record.studentId && student.classId === record.classId));
+    panel.classList.remove('hidden');
+    if (!pending.length) { list.innerHTML = '<p class="muted">No marks are awaiting verification for your classes.</p>'; return; }
+    const groups = [...new Map(pending.map((record) => [`${record.classId}|${record.subject}|${record.exam}|${yearId}`, record])).values()];
+    list.innerHTML = groups.map((record) => {
+        const records = getMarksVerificationGroup(record.classId, record.subject, record.exam, yearId).filter((item) => item.status === 'Submitted For Verification');
+        const schoolClass = classes.find((item) => item.id === record.classId);
+        const enteringTeacher = teachers.find((item) => item.id === record.enteredByTeacherId);
+        const submittedAt = records.map((item) => item.submittedAt).filter(Boolean).sort()[0] || '—';
+        return `<div class="account-row"><div><b>${escapeHtml(schoolClass ? `${schoolClass.name}-${schoolClass.section}` : record.classId)} · ${escapeHtml(record.subject)} · ${escapeHtml(record.exam)}</b><small>Entering Teacher: ${escapeHtml(enteringTeacher?.name || record.enteredByTeacherId || 'Unknown')} · ${records.length} students · Submitted: ${escapeHtml(submittedAt)}</small></div><div><button class="text-button" type="button" onclick="verifyMarksGroup('${record.classId}','${record.subject}','${record.exam}','${yearId}')">Verify</button><button class="text-button danger-button" type="button" onclick="rejectMarksGroup('${record.classId}','${record.subject}','${record.exam}','${yearId}')">Reject</button></div></div>`;
+    }).join('');
+}
+
+function verifyMarksGroup(classId, subject, exam, academicYearId) {
+    if (currentRole !== 'teacher' || !isClassTeacherForClass(currentAccount?.teacherId, classId)) return;
+    const records = getMarksVerificationGroup(classId, subject, exam, academicYearId);
+    const valid = records.length > 0 && records.every((record) => record.status === 'Submitted For Verification' && students.some((student) => student.id === record.studentId && student.classId === classId) && getSubjectsForClass(classId).includes(subject) && getSubjectAllocationsForTeacher(record.enteredByTeacherId, academicYearId).some((allocation) => allocation.classId === classId && allocation.subject === subject) && Number(record.score) >= 0 && Number(record.score) <= Number(record.maximumMarks));
+    if (!valid) { showMessage('marks-message', 'All submitted marks must be valid and allocated before verification.', 'error'); return; }
+    records.forEach((record) => { record.status = 'Verified'; record.verifiedByTeacherId = currentAccount.teacherId; record.verifiedAt = new Date().toISOString(); record.rejectedByTeacherId = null; record.rejectedAt = null; record.rejectionReason = ''; });
+    saveStore('marks', marksRecords); renderTeacherMarksVerificationQueue(); loadTeacherMarksRoster(); renderTeacherDashboard(); renderAdminDashboard();
+}
+
+function rejectMarksGroup(classId, subject, exam, academicYearId) {
+    if (currentRole !== 'teacher' || !isClassTeacherForClass(currentAccount?.teacherId, classId)) return;
+    const rejectionReason = window.prompt('Reason for rejecting these marks:')?.trim();
+    if (!rejectionReason) return;
+    const records = getMarksVerificationGroup(classId, subject, exam, academicYearId).filter((record) => record.status === 'Submitted For Verification');
+    if (!records.length) return;
+    records.forEach((record) => { record.status = 'Rejected'; record.rejectedByTeacherId = currentAccount.teacherId; record.rejectedAt = new Date().toISOString(); record.rejectionReason = rejectionReason; record.verifiedByTeacherId = null; record.verifiedAt = null; record.statusHistory = [...(record.statusHistory || []), { from: 'Submitted For Verification', to: 'Rejected', changedBy: currentAccount.teacherId, changedAt: new Date().toISOString(), reason: rejectionReason }]; });
+    saveStore('marks', marksRecords); renderTeacherMarksVerificationQueue(); loadTeacherMarksRoster(); renderTeacherDashboard(); renderAdminDashboard();
 }
 
 
@@ -3166,13 +3376,17 @@ function publishVerifiedMarksFromRoster() {
         return;
     }
 
+    const unverifiedRecords = records.filter((record) => record.status !== 'Verified');
+    if (unverifiedRecords.length) {
+        showMessage('marks-message', 'All marks must be verified before publication.', 'error');
+        return;
+    }
     records.forEach((record) => {
         record.status = 'Published';
-        record.verifiedBy = currentAccount?.teacherId || currentAccount?.id;
-        record.verifiedAt = new Date().toISOString();
+        record.publishedByTeacherId = currentAccount?.teacherId || currentAccount?.id;
+        record.publishedAt = new Date().toISOString();
     });
-
-    saveStore('marksRecords', marksRecords);
+    saveStore('marks', marksRecords);
     showMessage('marks-message', `Marks for ${subject} (${exam}) have been published successfully.`);
     if (typeof renderMarksRoster === 'function') {
         renderMarksRoster();
@@ -3304,11 +3518,11 @@ function renderPortalReportCard() {
     const yearId = document.getElementById(`${prefix}-report-academic-year`)?.value || defaultAcademicYearId;
     const exam = document.getElementById(`${prefix}-report-exam`)?.value || 'All Exams';
     const container = document.getElementById('report-reader');
-    if (container) renderOfficialReportCard(container, student.id, yearId, 'Annual', exam, '');
+    if (container) renderOfficialReportCard(container, student.id, yearId, exam, '');
 }
 
 function renderPrototypeReportCard(container, studentId, academicYearId, exam, teacherComment = '') {
-    renderOfficialReportCard(container, studentId, academicYearId, 'Annual', exam, teacherComment);
+    renderOfficialReportCard(container, studentId, academicYearId, exam, teacherComment);
 }
 
 
@@ -3324,6 +3538,8 @@ function getReportCardKey(studentId, academicYearId, exam) {
 function getReportCardMarks(studentId, classId, academicYearId = defaultAcademicYearId, exam = 'All Exams') {
     return marksRecords.filter((m) =>
         m.studentId === studentId &&
+        m.classId === classId &&
+        m.status === 'Published' &&
         (m.academicYearId || defaultAcademicYearId) === academicYearId &&
         (exam === 'All Exams' || m.exam === exam)
     );
@@ -3332,12 +3548,7 @@ function getReportCardMarks(studentId, classId, academicYearId = defaultAcademic
 function getReportCardSubjectsMissing(student, academicYearId = defaultAcademicYearId, exam = 'All Exams') {
     if (!student) return [];
     const requiredSubjects = getSubjectsForClass(student.classId);
-    const publishedMarks = marksRecords.filter((m) =>
-        m.studentId === student.id &&
-        m.status === 'Published' &&
-        (m.academicYearId || defaultAcademicYearId) === academicYearId &&
-        (exam === 'All Exams' || m.exam === exam)
-    );
+    const publishedMarks = getReportCardMarks(student.id, student.classId, academicYearId, exam);
     const publishedSubjects = new Set(publishedMarks.map((m) => m.subject));
     return requiredSubjects.filter((sub) => !publishedSubjects.has(sub));
 }
@@ -3351,20 +3562,26 @@ function canPublishReportCard(student) {
     return false;
 }
 
-function renderOfficialReportCard(container, studentId, academicYearId = defaultAcademicYearId, term = 'Annual', exam = 'All Exams', teacherCommentOverride = '') {
-    const student = students.find((s) => s.id === studentId) || students[0];
+function renderOfficialReportCard(container, studentId, academicYearId = defaultAcademicYearId, exam = 'All Exams', teacherCommentOverride = '') {
+    const student = students.find((s) => s.id === studentId);
     if (!student || !container) return;
 
     if (currentRole === 'teacher' && !isClassTeacherForClass(currentAccount?.teacherId, student.classId)) {
-        container.innerHTML = '<div class="report-preview-empty"><p class="muted">Access denied: Only the designated Class Teacher can generate or view official report cards for this class.</p></div>';
+        container.innerHTML = '<div class="report-preview-empty"><p class="muted">Access denied: Only the designated Class Teacher can generate or view prototype report cards for this class.</p></div>';
         return;
     }
 
-    let published = marksRecords.filter((m) => m.studentId === student.id && m.status === 'Published');
+    const reportCard = reportCards.find((card) => card.studentId === student.id && card.academicYearId === academicYearId && card.exam === exam && card.status === 'Published');
+    if ((currentRole === 'student' || currentRole === 'parent') && !reportCard) {
+        container.innerHTML = '<div class="report-preview-empty"><p class="muted">Report Card is not yet published.</p></div>';
+        return;
+    }
+
+    let published = marksRecords.filter((m) => m.studentId === student.id && m.classId === student.classId && m.status === 'Published');
     if (academicYearId && academicYearId !== 'all') {
         published = published.filter((m) => (m.academicYearId || defaultAcademicYearId) === academicYearId);
     }
-    if (exam && exam !== 'All Exams' && exam !== 'All Examinations In Term') {
+    if (exam && exam !== 'All Exams') {
         published = published.filter((m) => m.exam === exam);
     }
 
@@ -3378,10 +3595,12 @@ function renderOfficialReportCard(container, studentId, academicYearId = default
     const overallPct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
     const overallGrade = calculateGrade(overallPct);
 
-    let resultStatus = 'Passed with Distinction';
-    if (overallPct < 50) resultStatus = 'Needs Academic Support';
-    else if (overallPct < 70) resultStatus = 'Passed';
-    else if (overallPct < 85) resultStatus = 'Passed with Merit';
+    const threshold = Number(schoolSettings.passPercentage || 35);
+    const provisionalPass = published.length > 0 && getSubjectsForClass(student.classId).every((subject) => {
+        const subjectMark = published.find((mark) => mark.subject === subject);
+        return subjectMark && Number(subjectMark.percentage) >= threshold;
+    });
+    const resultStatus = (reportCard ? reportCard.pass : provisionalPass) ? 'Passed' : 'Needs Academic Support';
 
     const subjectRows = published.length ? published.map((m) => `
         <tr>
@@ -3391,9 +3610,9 @@ function renderOfficialReportCard(container, studentId, academicYearId = default
             <td>${m.percentage}%</td>
             <td><strong class="grade">${escapeHtml(m.grade)}</strong></td>
         </tr>
-    `).join('') : '<tr><td colspan="5" class="muted">No published examination marks available for this term.</td></tr>';
+    `).join('') : '<tr><td colspan="5" class="muted">No published examination marks available for this exam.</td></tr>';
 
-    const comment = teacherCommentOverride || (overallPct >= 80 ? 'Demonstrates excellent grasp of academic concepts and active classroom participation.' : 'Showing steady progress. Continued focus on revision will yield even better results.');
+    const comment = teacherCommentOverride || reportCard?.academicRemark || '';
 
     container.innerHTML = `
         <div class="report-header">
@@ -3405,8 +3624,8 @@ function renderOfficialReportCard(container, studentId, academicYearId = default
                 </div>
             </div>
             <div style="text-align:right;">
-                <span class="status paid">Official Report Card</span><br>
-                <small class="muted">Academic Year: ${escapeHtml(academicYearId)} · Term: ${escapeHtml(term)}</small>
+                <span class="status paid">Prototype Report Card</span><br>
+                <small class="muted">Academic Year: ${escapeHtml(academicYearId)} · Exam: ${escapeHtml(exam)}</small>
             </div>
         </div>
 
@@ -3415,7 +3634,7 @@ function renderOfficialReportCard(container, studentId, academicYearId = default
             <p><b>Admission Number:</b> <code>${escapeHtml(student.admissionNumber)}</code></p>
             <p><b>Class & Section:</b> ${escapeHtml(student.className)}-${escapeHtml(student.section)}</p>
             <p><b>Roll Number:</b> ${escapeHtml(student.roll)}</p>
-            <p><b>Attendance:</b> ${attRate}% (${attended} of ${totalWorking} sessions attended)</p>
+            <p><b>Attendance:</b> ${attRate}% (${attended} day-equivalents attended of ${totalWorking})</p>
             <p><b>Overall Result:</b> <b style="color:var(--teal);">${resultStatus}</b></p>
         </div>
 
@@ -3436,11 +3655,14 @@ function renderOfficialReportCard(container, studentId, academicYearId = default
             <div>
                 <p><b>Cumulative Total:</b> ${totalScore} / ${totalMax} (${overallPct}%)</p>
                 <p><b>Final Grade:</b> <span class="grade" style="font-size:1.1rem;">${overallGrade}</span></p>
-                <p><b>Faculty Remarks:</b> <i>"${escapeHtml(comment)}"</i></p>
+                <p><b>Academic Remark:</b> <i>"${escapeHtml(comment || '—')}"</i></p>
+                <p><b>Conduct:</b> ${escapeHtml(reportCard?.conduct || '—')}</p>
+                <p><b>Conduct Remark:</b> ${escapeHtml(reportCard?.conductRemark || '—')}</p>
             </div>
             <div style="text-align:right;">
                 <p><b>Principal:</b> ${escapeHtml(schoolSettings.principal || 'Principal')}</p>
-                <small class="muted">Verified Academic Document</small>
+                <small class="muted">Prototype Academic Document</small>
+                ${reportCard?.publishedBy ? `<small class="muted">Published by: ${escapeHtml(reportCard.publishedBy)}${reportCard.publishedAt ? ` · ${new Date(reportCard.publishedAt).toLocaleDateString('en-GB')}` : ''}</small>` : ''}
             </div>
         </div>
 
@@ -3454,7 +3676,6 @@ function renderOfficialReportCard(container, studentId, academicYearId = default
 function populateReportStudentSelect() {
     const select = document.getElementById('report-student');
     if (!select) return;
-
     let availableStudents = students.filter((s) => s.status === 'Active');
     if (currentRole === 'teacher') {
         availableStudents = availableStudents.filter((s) => isClassTeacherForClass(currentAccount?.teacherId, s.classId));
@@ -3529,7 +3750,10 @@ function publishReportCard(reportId) {
     }
     const marks = getReportCardMarks(student.id, student.classId, card.academicYearId, card.exam);
     const threshold = Number(schoolSettings.passPercentage || 35);
-    card.pass = marks.every((mark) => Number(mark.percentage) >= threshold);
+    card.pass = marks.length > 0 && getSubjectsForClass(student.classId).every((subject) => {
+        const subjectMark = marks.find((mark) => mark.subject === subject);
+        return subjectMark && Number(subjectMark.percentage) >= threshold;
+    });
     card.status = 'Published';
     card.publishedBy = currentAccount?.teacherId || currentAccount?.id;
     card.publishedAt = new Date().toISOString();
@@ -3563,8 +3787,8 @@ function renderAdminFeeLedger() {
     const filtered = feeInvoices.filter((inv) => inv.studentName.toLowerCase().includes(search) || inv.invoiceId.toLowerCase().includes(search));
 
     const totalBilled = feeInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
-    const totalCollected = paymentRecords.reduce((sum, p) => sum + Number(p.amount), 0);
-    const totalPending = Math.max(0, totalBilled - totalCollected);
+    const totalCollected = feeInvoices.reduce((sum, invoice) => sum + getInvoicePaidAmount(invoice.invoiceId), 0);
+    const totalPending = feeInvoices.reduce((sum, invoice) => sum + getInvoiceBalance(invoice), 0);
     const rate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
 
     document.getElementById('admin-fee-stat-total').textContent = `₹${totalBilled.toLocaleString('en-IN')}`;
@@ -3574,7 +3798,7 @@ function renderAdminFeeLedger() {
 
     tbody.innerHTML = filtered.map((inv) => {
         const student = students.find((s) => s.id === inv.studentId);
-        const isPaid = inv.status === 'Paid' || paymentRecords.some((p) => p.invoiceId === inv.invoiceId && p.studentId === inv.studentId);
+        const isPaid = getInvoiceBalance(inv) <= 0;
 
         return `<tr>
             <td><b>${escapeHtml(inv.studentName)}</b></td>
@@ -3645,23 +3869,22 @@ document.getElementById('fee-structure-form')?.addEventListener('submit', (event
 });
 
 function recordCashPaymentAdmin(invInternalId) {
+    if (currentRole !== 'admin') return;
     const inv = feeInvoices.find((i) => i.id === invInternalId);
-    if (!inv) return;
+    if (!inv || getInvoiceBalance(inv) <= 0) return;
 
-    // Prevent duplicate payment
-    if (inv.status === 'Paid' || paymentRecords.some((p) => p.invoiceId === inv.invoiceId && p.studentId === inv.studentId)) {
-        alert('This invoice has already been settled.');
-        return;
-    }
+    const transactionReference = `CASH-${Date.now().toString().slice(-6)}`;
+    if (paymentRecords.some((payment) => payment.transactionReference === transactionReference)) return;
+    const balance = getInvoiceBalance(inv);
 
     const newPayment = {
         id: `pay-${Date.now()}`,
-        invoiceId: inv.invoiceId,
         studentId: inv.studentId,
         parentAccountId: 'admin-cash-register',
-        amount: inv.amount,
+        totalAmount: balance,
+        allocations: [{ invoiceId: inv.invoiceId, amountApplied: balance }],
         paymentMethod: 'Cash (Office)',
-        transactionReference: `CASH-${Date.now().toString().slice(-6)}`,
+        transactionReference,
         paidAt: new Date().toISOString()
     };
 
@@ -3673,7 +3896,7 @@ function recordCashPaymentAdmin(invInternalId) {
 
     renderAdminFeeLedger();
     renderAdminDashboard();
-    printReceiptForInvoice(inv.invoiceId);
+    printReceiptForPayment(newPayment.id);
 }
 
 function renderParentFees() {
@@ -3684,8 +3907,8 @@ function renderParentFees() {
     document.getElementById('parent-fee-class').textContent = `${child.className}-${child.section} · Roll No. ${child.roll}`;
 
     const invoices = getStudentInvoices(child.id);
-    const pendingInvoices = invoices.filter((inv) => inv.status !== 'Paid' && !paymentRecords.some((p) => p.invoiceId === inv.invoiceId && p.studentId === child.id));
-    const pendingTotal = pendingInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+    const pendingInvoices = invoices.filter((inv) => getInvoiceBalance(inv) > 0);
+    const pendingTotal = pendingInvoices.reduce((sum, inv) => sum + getInvoiceBalance(inv), 0);
 
     document.getElementById('parent-fee-balance').textContent = `₹${pendingTotal.toLocaleString('en-IN')}`;
     const statusBadge = document.getElementById('parent-fee-status-badge');
@@ -3695,7 +3918,7 @@ function renderParentFees() {
     const tbody = document.querySelector('#parent-fee-history tbody');
     if (tbody) {
         tbody.innerHTML = invoices.map((inv) => {
-            const isPaid = inv.status === 'Paid' || paymentRecords.some((p) => p.invoiceId === inv.invoiceId && p.studentId === child.id);
+            const isPaid = getInvoiceBalance(inv) <= 0;
             return `<tr>
                 <td><code>${escapeHtml(inv.invoiceId)}</code></td>
                 <td>${escapeHtml(inv.category)}</td>
@@ -3722,40 +3945,41 @@ function renderParentFees() {
 document.getElementById('parent-payment-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const child = getSelectedParentChild();
-    const invoiceId = document.getElementById('parent-pay-invoice-select').value;
+    const invoiceIds = Array.from(document.getElementById('parent-pay-invoice-select')?.selectedOptions || []).map((option) => option.value);
     const method = document.getElementById('payment-method').value;
     const ref = document.getElementById('payment-reference').value.trim() || `TXN-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    if (!invoiceId) return;
-
-    // Prevent duplicate payment
-    if (paymentRecords.some((p) => p.invoiceId === invoiceId && p.studentId === child.id)) {
-        document.getElementById('parent-payment-message').textContent = 'This invoice has already been paid.';
+    if (currentRole !== 'parent' || !child || !invoiceIds.length) return;
+    const invoices = invoiceIds.map((invoiceId) => feeInvoices.find((invoice) => invoice.invoiceId === invoiceId && invoice.studentId === child.id));
+    if (invoices.some((invoice) => !invoice || getInvoiceBalance(invoice) <= 0)) {
+        document.getElementById('parent-payment-message').textContent = 'One or more selected invoices are invalid or already paid.';
+        document.getElementById('parent-payment-message').className = 'form-message error';
+        return;
+    }
+    if (paymentRecords.some((payment) => payment.transactionReference === ref)) {
+        document.getElementById('parent-payment-message').textContent = 'Transaction reference already used.';
         document.getElementById('parent-payment-message').className = 'form-message error';
         return;
     }
 
-    const invoice = feeInvoices.find((inv) => inv.invoiceId === invoiceId && inv.studentId === child.id);
-    if (!invoice) return;
-
     const payment = {
         id: `pay-${Date.now()}`,
-        invoiceId,
         studentId: child.id,
         parentAccountId: currentAccount.id,
-        amount: invoice.amount,
+        totalAmount: invoices.reduce((sum, invoice) => sum + getInvoiceBalance(invoice), 0),
+        allocations: invoices.map((invoice) => ({ invoiceId: invoice.invoiceId, amountApplied: getInvoiceBalance(invoice) })),
         paymentMethod: method,
         transactionReference: ref,
         paidAt: new Date().toISOString()
     };
 
     paymentRecords.push(payment);
-    invoice.status = 'Paid';
+    invoices.forEach((invoice) => { invoice.status = 'Paid'; });
 
     saveStore('payments', paymentRecords);
     saveStore('feeInvoices', feeInvoices);
 
-    document.getElementById('parent-payment-message').innerHTML = 'Payment submitted successfully. Demo transaction recorded. <button class="text-button" type="button" onclick="printReceiptForInvoice(\'' + invoiceId + '\')">Print Receipt</button>';
+    document.getElementById('parent-payment-message').textContent = 'Payment submitted successfully. Demo transaction recorded.';
     document.getElementById('parent-payment-message').className = 'form-message';
 
     renderParentFees();
@@ -3777,11 +4001,11 @@ function renderAdminPaymentsTable() {
         return `<tr>
             <td>${new Date(p.paidAt).toLocaleString('en-GB')}</td>
             <td><b>${student ? escapeHtml(student.name) : 'Student'}</b></td>
-            <td><code>${escapeHtml(p.invoiceId)}</code></td>
-            <td>₹${Number(p.amount).toLocaleString('en-IN')}</td>
+            <td><code>${escapeHtml(getPaymentInvoiceIds(p).join(', ') || '—')}</code></td>
+            <td>₹${Number(p.totalAmount || 0).toLocaleString('en-IN')}</td>
             <td>${escapeHtml(p.paymentMethod)}</td>
             <td><code>${escapeHtml(p.transactionReference)}</code></td>
-            <td><button class="text-button" type="button" onclick="printReceiptForInvoice('${p.invoiceId}')">View Receipt</button></td>
+            <td><button class="text-button" type="button" onclick="printReceiptForPayment('${p.id}')">View Receipt</button></td>
         </tr>`;
     }).join('');
 }
@@ -3790,7 +4014,7 @@ function renderAdminDefaultersTable() {
     const tbody = document.querySelector('#admin-defaulters-table tbody');
     if (!tbody) return;
 
-    const overdue = feeInvoices.filter((inv) => inv.dueDate < todayISO && inv.status !== 'Paid' && !paymentRecords.some((p) => p.invoiceId === inv.invoiceId && p.studentId === inv.studentId));
+    const overdue = feeInvoices.filter((inv) => inv.dueDate < todayISO && getInvoiceBalance(inv) > 0);
 
     if (!overdue.length) {
         tbody.innerHTML = '<tr><td colspan="7" class="muted">No overdue fee defaulters at this time.</td></tr>';
@@ -3804,7 +4028,7 @@ function renderAdminDefaultersTable() {
             <td>${student ? `${escapeHtml(student.className)}-${escapeHtml(student.section)}` : 'Class'}</td>
             <td><code>${escapeHtml(inv.invoiceId)}</code></td>
             <td style="color:var(--red);"><b>${escapeHtml(inv.dueDate)}</b></td>
-            <td><strong>₹${Number(inv.amount).toLocaleString('en-IN')}</strong></td>
+            <td><strong>₹${getInvoiceBalance(inv).toLocaleString('en-IN')}</strong></td>
             <td>${student ? `${escapeHtml(student.parentName)} (${escapeHtml(student.parentMobile)})` : '—'}</td>
             <td><button class="primary-button small" type="button" onclick="sendIndividualReminder('${inv.studentId}')">Send Notice</button></td>
         </tr>`;
@@ -3812,7 +4036,7 @@ function renderAdminDefaultersTable() {
 }
 
 function sendDefaulterReminders() {
-    const overdue = feeInvoices.filter((inv) => inv.dueDate < todayISO && inv.status !== 'Paid' && !paymentRecords.some((p) => p.invoiceId === inv.invoiceId && p.studentId === inv.studentId));
+    const overdue = feeInvoices.filter((inv) => inv.dueDate < todayISO && getInvoiceBalance(inv) > 0);
     overdue.forEach((inv) => {
         notificationRecords.push({
             id: `notif-defaulter-${Date.now()}-${inv.studentId}`,
@@ -3821,9 +4045,12 @@ function sendDefaulterReminders() {
             studentId: inv.studentId,
             classId: inv.classId,
             title: 'Outstanding Fee Reminder',
-            message: `Friendly reminder: Fee invoice ${inv.invoiceId} of ₹${inv.amount} is overdue. Please settle at your earliest convenience.`,
+            message: `Friendly reminder: Fee invoice ${inv.invoiceId} of ₹${getInvoiceBalance(inv)} is overdue. Please settle at your earliest convenience.`,
             createdAt: new Date().toISOString(),
-            read: false
+            senderId: currentAccount?.id || null,
+            senderRole: currentRole || 'admin',
+            readByAccountIds: [],
+            dismissedByAccountIds: []
         });
     });
     saveStore('notifications', notificationRecords);
@@ -3833,6 +4060,7 @@ function sendDefaulterReminders() {
 }
 
 function sendIndividualReminder(studentId) {
+    if (currentRole !== 'admin') return;
     const student = students.find((s) => s.id === studentId);
     if (!student) return;
     notificationRecords.push({
@@ -3842,9 +4070,12 @@ function sendIndividualReminder(studentId) {
         studentId,
         classId: student.classId,
         title: 'Fee Payment Reminder',
-        message: `Dear parent, please note that term fees for ${student.name} are pending. Kindly complete payment through the portal.`,
+        message: `Dear parent, please note that outstanding fees for ${student.name} are pending. Kindly complete payment through the portal.`,
         createdAt: new Date().toISOString(),
-        read: false
+        senderId: currentAccount.id,
+        senderRole: currentRole,
+        readByAccountIds: [],
+        dismissedByAccountIds: []
     });
     saveStore('notifications', notificationRecords);
     alert(`Notice sent to parent of ${student.name}.`);
@@ -3865,47 +4096,48 @@ function renderParentPaymentsHistory() {
 
     tbody.innerHTML = childPayments.map((p) => `
         <tr>
-            <td><code>${escapeHtml(p.invoiceId)}</code></td>
+            <td><code>${escapeHtml(getPaymentInvoiceIds(p).join(', ') || '—')}</code></td>
             <td>${new Date(p.paidAt).toLocaleDateString('en-GB')}</td>
-            <td>₹${Number(p.amount).toLocaleString('en-IN')}</td>
+            <td>₹${getPaymentTotal(p).toLocaleString('en-IN')}</td>
             <td>${escapeHtml(p.paymentMethod)}</td>
             <td><code>${escapeHtml(p.transactionReference)}</code></td>
-            <td><button class="text-button" type="button" onclick="printReceiptForInvoice('${p.invoiceId}')">Print Receipt</button></td>
+            <td><button class="text-button" type="button" onclick="printReceiptForPayment('${p.id}')">Print Receipt</button></td>
         </tr>
     `).join('');
 }
 
-function printReceiptForInvoice(invoiceId) {
-    const payment = paymentRecords.find((p) => p.invoiceId === invoiceId);
-    const invoice = feeInvoices.find((i) => i.invoiceId === invoiceId);
-    const student = students.find((s) => s.id === (payment ? payment.studentId : invoice?.studentId));
+function printReceiptForPayment(paymentId) {
+    const payment = paymentRecords.find((item) => item.id === paymentId);
+    const allocations = payment?.allocations || [];
+    const validAllocations = allocations.map((allocation) => ({ allocation, invoice: feeInvoices.find((item) => item.invoiceId === allocation.invoiceId) })).filter((item) => item.invoice);
+    const student = payment ? students.find((item) => item.id === payment.studentId) : null;
+    if (!payment || !student || !validAllocations.length || validAllocations.length !== allocations.length) return;
 
     const receiptHtml = `
         <div style="font-family:sans-serif; padding:30px; max-width:650px; margin:0 auto; border:2px solid #087f73; border-radius:10px;">
             <div style="display:flex; justify-content:space-between; border-bottom:2px solid #e4e9e8; padding-bottom:15px;">
                 <div>
                     <h2 style="color:#087f73; margin:0;">${escapeHtml(schoolSettings.name)}</h2>
-                    <p style="margin:4px 0; color:#71808c;">Official Fee Payment Receipt</p>
+                    <p style="margin:4px 0; color:#71808c;">Prototype Fee Payment Receipt</p>
                 </div>
                 <div style="text-align:right;">
                     <b>Receipt Date:</b> ${payment ? new Date(payment.paidAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}<br>
-                    <b>Reference:</b> <code>${payment ? escapeHtml(payment.transactionReference) : 'OFFICE-CASH'}</code>
+                        <b>Reference:</b> <code>${escapeHtml(payment.transactionReference)}</code>
                 </div>
             </div>
             <div style="margin:20px 0; font-size:14px; line-height:1.7;">
                 <p><b>Student Name:</b> ${student ? escapeHtml(student.name) : 'Student'}<br>
                 <b>Admission No:</b> ${student ? escapeHtml(student.admissionNumber) : '—'}<br>
                 <b>Class & Section:</b> ${student ? `${escapeHtml(student.className)}-${escapeHtml(student.section)}` : 'Class'}<br>
-                <b>Invoice ID:</b> <code>${escapeHtml(invoiceId)}</code><br>
-                <b>Category:</b> ${invoice ? escapeHtml(invoice.category) : 'School Tuition'}<br>
-                <b>Payment Method:</b> ${payment ? escapeHtml(payment.paymentMethod) : 'Cash (Office)'}</p>
+                <b>Payment Method:</b> ${escapeHtml(payment.paymentMethod)}</p>
             </div>
             <table style="width:100%; border-collapse:collapse; margin:20px 0;">
                 <tr style="background:#f5f7f5;"><th style="padding:10px; text-align:left; border:1px solid #e4e9e8;">Description</th><th style="padding:10px; text-align:right; border:1px solid #e4e9e8;">Amount Paid</th></tr>
-                <tr><td style="padding:10px; border:1px solid #e4e9e8;">${invoice ? escapeHtml(invoice.category) : 'Tuition Fee'}</td><td style="padding:10px; text-align:right; border:1px solid #e4e9e8;"><b>₹${payment ? Number(payment.amount).toLocaleString('en-IN') : '12,500'}</b></td></tr>
+                ${validAllocations.map(({ allocation, invoice }) => `<tr><td style="padding:10px; border:1px solid #e4e9e8;">${escapeHtml(invoice.category)} · ${escapeHtml(invoice.invoiceId)}</td><td style="padding:10px; text-align:right; border:1px solid #e4e9e8;"><b>₹${Number(allocation.amountApplied || 0).toLocaleString('en-IN')}</b></td></tr>`).join('')}
+                <tr><td style="padding:10px; border:1px solid #e4e9e8;"><b>Total paid</b></td><td style="padding:10px; text-align:right; border:1px solid #e4e9e8;"><b>₹${getPaymentTotal(payment).toLocaleString('en-IN')}</b></td></tr>
             </table>
             <div style="display:flex; justify-content:space-between; margin-top:30px; padding-top:20px; border-top:1px solid #e4e9e8;">
-                <small style="color:#71808c;">Computer-generated receipt · Valid without physical signature</small>
+                <small style="color:#71808c;">Prototype receipt for demonstration only</small>
                 <b>Accounts Seal: ${escapeHtml(schoolSettings.initials)}</b>
             </div>
         </div>
@@ -3913,9 +4145,14 @@ function printReceiptForInvoice(invoiceId) {
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-        printWindow.document.write(`<html><head><title>Receipt - ${invoiceId}</title></head><body onload="window.print()">${receiptHtml}</body></html>`);
+        printWindow.document.write(`<html><head><title>Receipt - ${escapeHtml(payment.transactionReference)}</title></head><body onload="window.print()">${receiptHtml}</body></html>`);
         printWindow.document.close();
     }
+}
+
+function printReceiptForInvoice(invoiceId) {
+    const payment = paymentRecords.find((item) => getPaymentInvoiceIds(item).includes(invoiceId));
+    if (payment) printReceiptForPayment(payment.id);
 }
 
 
@@ -3944,11 +4181,13 @@ function populateNotificationAudienceSelectors() {
         `;
     }
 
+    const teacherClasses = currentRole === 'teacher' ? getTeacherClasses().filter((schoolClass) => teacherCanViewClass(schoolClass.id)) : classes;
+    const teacherStudents = currentRole === 'teacher' ? students.filter((student) => teacherCanViewClass(student.classId) && student.status === 'Active') : students;
     if (classSelect) {
-        classSelect.innerHTML = classes.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}-${escapeHtml(c.section)}</option>`).join('');
+        classSelect.innerHTML = teacherClasses.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}-${escapeHtml(c.section)}</option>`).join('');
     }
     if (studentSelect) {
-        studentSelect.innerHTML = students.map((s) => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.className)}-${escapeHtml(s.section)})</option>`).join('');
+        studentSelect.innerHTML = teacherStudents.map((s) => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.className)}-${escapeHtml(s.section)})</option>`).join('');
     }
 }
 
@@ -3972,6 +4211,14 @@ document.getElementById('notification-form')?.addEventListener('submit', (event)
         studentId = document.getElementById('notification-student-select').value;
     }
 
+    if (!title || !message || !currentAccount || (currentRole !== 'admin' && currentRole !== 'teacher')) return;
+    if (currentRole === 'teacher' && audience !== 'Class' && audience !== 'Student') return;
+    if (currentRole === 'teacher' && audience === 'Class' && !teacherCanViewClass(classId)) return;
+    if (currentRole === 'teacher' && audience === 'Student') {
+        const targetStudent = students.find((student) => student.id === studentId);
+        if (!targetStudent || !teacherCanViewClass(targetStudent.classId)) return;
+    }
+
     notificationRecords.push({
         id: `notif-${Date.now()}`,
         type,
@@ -3981,7 +4228,10 @@ document.getElementById('notification-form')?.addEventListener('submit', (event)
         title,
         message,
         createdAt: new Date().toISOString(),
-        read: false
+        senderId: currentAccount.id,
+        senderRole: currentRole,
+        readByAccountIds: [],
+        dismissedByAccountIds: []
     });
 
     saveStore('notifications', notificationRecords);
@@ -4005,6 +4255,16 @@ function renderNotificationsList() {
         relevant = getStudentNotifications(student?.id, student?.classId);
     }
 
+    const typeFilter = document.getElementById('notification-type-filter')?.value || 'all';
+    const readFilter = document.getElementById('notification-read-filter')?.value || 'all';
+    relevant = relevant.filter((notification) => {
+        if ((notification.dismissedByAccountIds || []).includes(currentAccount?.id)) return false;
+        if (typeFilter !== 'all' && notification.type !== typeFilter) return false;
+        const isRead = (notification.readByAccountIds || []).includes(currentAccount?.id);
+        return readFilter === 'all' || (readFilter === 'read' ? isRead : !isRead);
+    });
+    const typeFilterSelect = document.getElementById('notification-type-filter');
+    if (typeFilterSelect && typeFilterSelect.options.length <= 1) typeFilterSelect.innerHTML = '<option value="all">All types</option>' + [...new Set(notificationRecords.map((notification) => notification.type))].map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
     if (!relevant.length) {
         list.innerHTML = '<p class="muted">No broadcast notifications found.</p>';
         return;
@@ -4018,13 +4278,26 @@ function renderNotificationsList() {
                 <p style="font-size:0.82rem; margin:3px 0;">${escapeHtml(n.message)}</p>
                 <small>${new Date(n.createdAt).toLocaleString('en-GB')} · Target: ${escapeHtml(n.audience)}</small>
             </div>
-            <button class="text-button danger-button" type="button" onclick="deleteNotification('${n.id}')">Dismiss</button>
+            <button class="text-button" type="button" onclick="markNotificationRead('${n.id}')">${(n.readByAccountIds || []).includes(currentAccount?.id) ? 'Read' : 'Mark as read'}</button>
+            ${currentRole === 'admin' ? '' : `<button class="text-button danger-button" type="button" onclick="deleteNotification('${n.id}')">Dismiss</button>`}
         </div>
     `).join('');
 }
 
+function markNotificationRead(notifId) {
+    const notification = notificationRecords.find((item) => item.id === notifId);
+    if (!notification || !currentAccount) return;
+    notification.readByAccountIds = Array.isArray(notification.readByAccountIds) ? notification.readByAccountIds : [];
+    if (!notification.readByAccountIds.includes(currentAccount.id)) notification.readByAccountIds.push(currentAccount.id);
+    saveStore('notifications', notificationRecords);
+    renderNotificationsList();
+}
+
 function deleteNotification(notifId) {
-    notificationRecords = notificationRecords.filter((n) => n.id !== notifId);
+    const notification = notificationRecords.find((item) => item.id === notifId);
+    if (!notification || !currentAccount || currentRole === 'admin') return;
+    notification.dismissedByAccountIds = Array.isArray(notification.dismissedByAccountIds) ? notification.dismissedByAccountIds : [];
+    if (!notification.dismissedByAccountIds.includes(currentAccount.id)) notification.dismissedByAccountIds.push(currentAccount.id);
     saveStore('notifications', notificationRecords);
     renderNotificationsList();
 }
@@ -4077,7 +4350,13 @@ document.getElementById('parent-message-form')?.addEventListener('submit', (even
     const studentId = document.getElementById('message-child').value;
     const teacherId = document.getElementById('message-teacher').value;
     const student = students.find((item) => item.id === studentId);
-    if (!student || !teacherId) return;
+    const linked = getLinkedStudentsForParent();
+    const teacher = teachers.find((item) => item.id === teacherId);
+    const subject = document.getElementById('message-subject').value.trim();
+    const text = document.getElementById('message-text').value.trim();
+    if (!student || !teacherId || !subject || !text) return;
+    if (currentRole === 'parent' && (!currentAccount || !linked.some((item) => item.id === studentId) || !getParentCommunicationTeachers(student).some((item) => item.id === teacherId))) return;
+    if (!teacher || (currentRole === 'teacher' && !teacherCanViewClass(student.classId))) return;
 
     if (currentRole === 'teacher' && !teacherCanAccessClass(student.classId)) {
         const statusEl = document.getElementById('parent-message-status');
@@ -4093,12 +4372,12 @@ document.getElementById('parent-message-form')?.addEventListener('submit', (even
         studentId,
         parentAccountId: currentRole === 'parent' ? currentAccount.id : student.parentAccountId,
         teacherId,
-        subject: document.getElementById('message-subject').value.trim(),
+        subject,
         messages: [{
             id: createUniqueId('message-entry'),
             senderRole: currentRole,
             senderId: currentAccount.id,
-            text: document.getElementById('message-text').value.trim(),
+            text,
             sentAt: new Date().toISOString(),
             readByAccountIds: [currentAccount.id]
         }],
@@ -4111,7 +4390,16 @@ document.getElementById('parent-message-form')?.addEventListener('submit', (even
     document.getElementById('parent-message-status').textContent = 'Message saved to the conversation.';
     document.getElementById('parent-message-status').className = 'form-message';
     event.target.reset();
+    populateMessageSelectors();
     renderParentMessages();
+});
+
+document.getElementById('message-child')?.addEventListener('change', (event) => {
+    if (currentRole !== 'parent') return;
+    const child = getLinkedStudentsForParent().find((student) => student.id === event.target.value);
+    const teacherSelect = document.getElementById('message-teacher');
+    const teachersForChild = getParentCommunicationTeachers(child);
+    if (teacherSelect) teacherSelect.innerHTML = teachersForChild.map((teacher) => `<option value="${teacher.id}">${escapeHtml(teacher.name)}</option>`).join('');
 });
 
 function renderParentMessages() {
@@ -4138,7 +4426,7 @@ function renderParentMessages() {
 function getVisibleComplaints() { if (currentRole === 'parent') return complaints.filter((complaint) => complaint.parentAccountId === currentAccount?.id); if (currentRole === 'teacher') return complaints.filter((complaint) => complaint.assignedTeacherId === currentAccount?.teacherId || isClassTeacherForClass(currentAccount?.teacherId, getStudentClassId(complaint.studentId))); if (currentRole === 'admin') return complaints; return []; }
 function populateComplaintChildren() { const select = document.getElementById('complaint-child'); if (!select || currentRole !== 'parent') return; select.innerHTML = getLinkedStudentsForParent().map((student) => `<option value="${student.id}">${escapeHtml(student.name)} (${escapeHtml(student.className)}-${escapeHtml(student.section)})</option>`).join(''); }
 function renderComplaints() { const list = document.getElementById('complaint-list'); if (!list) return; const filter = document.getElementById('complaint-status-filter')?.value || 'all'; const visible = getVisibleComplaints().filter((complaint) => filter === 'all' || complaint.status === filter); list.innerHTML = visible.map((complaint) => { const student = students.find((item) => item.id === complaint.studentId); const unread = complaint.replies.filter((reply) => reply.senderId !== currentAccount?.id && !(reply.readByAccountIds || []).includes(currentAccount?.id)).length; return `<div class="account-row"><div><b>${escapeHtml(complaint.category)} · ${escapeHtml(complaint.priority)}</b><small>${escapeHtml(student?.name || 'Student')} · ${escapeHtml(complaint.status)}${unread ? ` · ${unread} unread` : ''}</small><p>${escapeHtml(complaint.description)}</p></div><button class="text-button" type="button" onclick="openComplaintThread('${complaint.id}')">Open</button></div>`; }).join('') || '<p class="muted">No complaints found.</p>'; }
-document.getElementById('complaint-form')?.addEventListener('submit', (event) => { event.preventDefault(); const studentId = document.getElementById('complaint-child').value; const student = students.find((item) => item.id === studentId); if (!student || currentRole !== 'parent') return; complaints.unshift({ id: createUniqueId('complaint'), studentId, parentAccountId: currentAccount.id, category: document.getElementById('complaint-category').value, priority: document.getElementById('complaint-priority').value, description: document.getElementById('complaint-description').value.trim(), status: 'Open', assignedTeacherId: null, replies: [], internalNotes: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); saveStore('complaints', complaints); showMessage('complaint-message', 'Complaint raised successfully.'); event.target.reset(); renderComplaints(); });
+document.getElementById('complaint-form')?.addEventListener('submit', (event) => { event.preventDefault(); const studentId = document.getElementById('complaint-child').value; const student = students.find((item) => item.id === studentId); const description = document.getElementById('complaint-description').value.trim(); if (!student || currentRole !== 'parent' || !getLinkedStudentsForParent().some((child) => child.id === studentId) || !description) return; complaints.unshift({ id: createUniqueId('complaint'), studentId, parentAccountId: currentAccount.id, category: document.getElementById('complaint-category').value, priority: document.getElementById('complaint-priority').value, description, status: 'Open', assignedTeacherId: null, replies: [], internalNotes: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); saveStore('complaints', complaints); showMessage('complaint-message', 'Complaint raised successfully.'); event.target.reset(); renderComplaints(); });
 function openComplaintThread(complaintId) { const complaint = complaints.find((item) => item.id === complaintId); if (!complaint || !getVisibleComplaints().some((item) => item.id === complaintId)) return; complaint.replies.forEach((reply) => { reply.readByAccountIds = Array.isArray(reply.readByAccountIds) ? reply.readByAccountIds : []; if (!reply.readByAccountIds.includes(currentAccount.id)) reply.readByAccountIds.push(currentAccount.id); }); saveStore('complaints', complaints); const student = students.find((item) => item.id === complaint.studentId); const panel = document.getElementById('complaint-thread-panel'); document.getElementById('complaint-thread-title').textContent = `${complaint.category} · ${student?.name || 'Student'}`; const internal = currentRole === 'parent' ? '' : `<div class="complaint-internal"><b>Internal notes</b>${complaint.internalNotes.map((note) => `<p>${escapeHtml(note.text)} · ${escapeHtml(note.authorId)}</p>`).join('') || '<p>No internal notes.</p>'}</div>`; document.getElementById('complaint-thread-content').innerHTML = `<p><b>Priority:</b> ${escapeHtml(complaint.priority)} · <b>Status:</b> ${escapeHtml(complaint.status)}</p><p>${escapeHtml(complaint.description)}</p>${complaint.replies.map((reply) => `<div class="message-bubble"><b>${escapeHtml(reply.senderRole)}</b><p>${escapeHtml(reply.text)}</p></div>`).join('')}${internal}${currentRole === 'admin' ? `<button class="light-button small" type="button" onclick="assignComplaint('${complaint.id}')">Assign to Class Teacher</button><button class="light-button small" type="button" onclick="addComplaintInternalNote('${complaint.id}')">Add internal note</button>` : ''}${currentRole === 'teacher' ? `<button class="light-button small" type="button" onclick="updateComplaintStatus('${complaint.id}','Resolved')">Resolve</button><button class="text-button" type="button" onclick="updateComplaintStatus('${complaint.id}','In Progress')">In Progress</button>` : ''}${currentRole === 'parent' && ['Resolved','Closed'].includes(complaint.status) ? `<button class="light-button small" type="button" onclick="updateComplaintStatus('${complaint.id}','${complaint.status === 'Closed' ? 'Reopened' : 'Closed'}')">${complaint.status === 'Closed' ? 'Reopen' : 'Confirm Closure'}</button>` : ''}`; panel.classList.remove('hidden'); window.currentComplaintId = complaintId; renderComplaints(); }
 function closeComplaintThread() { document.getElementById('complaint-thread-panel')?.classList.add('hidden'); window.currentComplaintId = null; }
 function updateComplaintStatus(complaintId, status) { const complaint = complaints.find((item) => item.id === complaintId); if (!complaint) return; if (currentRole === 'teacher' && !getVisibleComplaints().some((item) => item.id === complaintId)) return; if (currentRole === 'parent' && complaint.parentAccountId !== currentAccount?.id) return; complaint.status = status; complaint.updatedAt = new Date().toISOString(); saveStore('complaints', complaints); openComplaintThread(complaintId); }
@@ -4173,6 +4461,13 @@ document.getElementById('message-reply-form')?.addEventListener('submit', (event
     const conversation = parentMessages.find((item) => item.id === activeMessageId);
     const text = document.getElementById('message-reply-text').value.trim();
     if (!conversation || !text) return;
+    const student = students.find((item) => item.id === conversation.studentId);
+    const canReply = currentRole === 'parent'
+        ? conversation.parentAccountId === currentAccount?.id
+        : currentRole === 'teacher'
+            ? conversation.teacherId === currentAccount?.teacherId && teacherCanViewClass(student?.classId)
+            : false;
+    if (!canReply) { closeMessageThread(); showMessage('parent-message-status', 'Access denied for this conversation.', 'error'); return; }
     conversation.messages.push({ id: createUniqueId('message-entry'), senderRole: currentRole, senderId: currentAccount.id, text, sentAt: new Date().toISOString(), readByAccountIds: [currentAccount.id] });
     conversation.status = currentRole === 'parent' ? 'Awaiting Teacher' : 'Awaiting Parent';
     conversation.updatedAt = new Date().toISOString();
@@ -4215,7 +4510,12 @@ function normalizeQuizRecord(quiz) {
         const derivedIndex = Number.isInteger(question.correctOptionIndex) ? question.correctOptionIndex : Math.max(0, options.indexOf(question.answer));
         return { ...question, id: question.id || createUniqueId('quiz-question'), options, correctOptionIndex: derivedIndex >= 0 && derivedIndex < 4 ? derivedIndex : 0, marks: Number(question.marks || 1), explanation: question.explanation || '' };
     });
-    return { ...quiz, questions, teacherId: quiz.teacherId || quiz.teacherAccountId || null, teacherAccountId: quiz.teacherAccountId || null, totalMarks: quiz.totalMarks || getQuizMaximumScore(questions), updatedAt: quiz.updatedAt || quiz.createdAt || new Date().toISOString(), createdAt: quiz.createdAt || new Date().toISOString() };
+    const teacherId = quiz.teacherId || null;
+    const teacherAccountId = quiz.teacherAccountId || null;
+    const verifiedTeacherAccount = accountRecords.find((account) => account.role === 'teacher' && account.id === teacherAccountId && account.teacherId === teacherId);
+    const resolvedTeacherId = teacherId || accountRecords.find((account) => account.role === 'teacher' && account.id === teacherAccountId)?.teacherId || null;
+    const resolvedTeacherAccountId = teacherAccountId || accountRecords.find((account) => account.role === 'teacher' && account.teacherId === teacherId)?.id || null;
+    return { ...quiz, questions, teacherId: resolvedTeacherId, teacherAccountId: resolvedTeacherAccountId, ownershipStatus: resolvedTeacherId || resolvedTeacherAccountId || verifiedTeacherAccount ? 'Assigned' : 'Unassigned', totalMarks: quiz.totalMarks || getQuizMaximumScore(questions), updatedAt: quiz.updatedAt || quiz.createdAt || new Date().toISOString(), createdAt: quiz.createdAt || new Date().toISOString() };
 }
 
 publishedQuizzes = publishedQuizzes.map(normalizeQuizRecord);
@@ -4291,10 +4591,6 @@ function validateQuizBuilderQuestions() {
         if (!Number.isInteger(question.marks) || question.marks < 1) return { valid: false, message: `Question ${number} marks must be a positive whole number.` };
     }
     return { valid: true, questions: quizBuilderQuestions };
-}
-
-function teacherOwnsQuiz(quiz) {
-    return currentRole === 'teacher' && (quiz.teacherAccountId === currentAccount?.id || quiz.teacherId === currentAccount?.teacherId);
 }
 
 function renderTeacherQuizzes() {
@@ -4455,30 +4751,42 @@ document.getElementById('next-question')?.addEventListener('click', () => {
     const feedback = document.getElementById('quiz-feedback');
 
         if (btn.textContent === 'Try again') {
-        currentQuestionIndex = 0;
-        interactiveScore = 0;
-        document.getElementById('quiz-score').textContent = '0';
-        renderInteractiveQuestion();
+        if (currentCustomQuizId) {
+            startInteractiveQuiz(currentCustomQuizId);
+        } else {
+            currentQuestionIndex = 0;
+            interactiveScore = 0;
+            quizAnswerHistory = [];
+            document.getElementById('quiz-score').textContent = `0 / ${getQuizMaximumScore(activeQuizQuestions)}`;
+            renderInteractiveQuestion();
+        }
         return;
     }
 
     if (btn.textContent === 'Next question' || btn.textContent === 'See results') {
         if (btn.textContent === 'See results') {
-            feedback.textContent = `Quiz complete! You scored ${interactiveScore} out of ${activeQuizQuestions.length}.`;
+            const maximumScore = getQuizMaximumScore(activeQuizQuestions);
+            feedback.textContent = `Quiz complete! You scored ${interactiveScore} out of ${maximumScore}.`;
             btn.textContent = 'Try again';
 
-            if (currentCustomQuizId) {
+            if (currentCustomQuizId && !currentQuizAttemptSaved) {
                 const student = getCurrentStudent();
+                const quiz = publishedQuizzes.find((item) => item.id === currentCustomQuizId);
+                const attempts = quizAttempts.filter((attempt) => attempt.quizId === currentCustomQuizId && attempt.studentId === student?.id);
+                if (!student || !quiz || quiz.status !== 'Published' || quiz.targetClass !== student.classId || (attempts.length && quiz.retryAllowed === false)) return;
+                const answers = activeQuizQuestions.map((question, index) => quizAnswerHistory[index] || null);
                 quizAttempts.push({
                     id: `attempt-${Date.now()}`,
                     quizId: currentCustomQuizId,
                     studentId: student.id,
                     studentName: student.name,
-                    score: interactiveScore * 2,
-                    maxScore: activeQuizQuestions.length * 2,
-                    percentage: Math.round((interactiveScore / activeQuizQuestions.length) * 100),
+                    score: interactiveScore,
+                    maxScore: maximumScore,
+                    percentage: Math.round((interactiveScore / maximumScore) * 100),
+                    answers,
                     submittedAt: new Date().toISOString()
                 });
+                currentQuizAttemptSaved = true;
                 saveStore('futureschoolQuizAttempts', quizAttempts);
                 renderStudentQuizzes();
             }
@@ -4497,28 +4805,38 @@ document.getElementById('next-question')?.addEventListener('click', () => {
     });
 
     if (currentSelectedOption === q.answer) {
-        interactiveScore += 1;
-        document.getElementById('quiz-score').textContent = interactiveScore;
+        interactiveScore += Number(q.marks || 1);
+        document.getElementById('quiz-score').textContent = `${interactiveScore} / ${getQuizMaximumScore(activeQuizQuestions)}`;
         feedback.textContent = `Correct! ${q.explanation}`;
         feedback.style.color = 'var(--green)';
     } else {
         feedback.textContent = `Not quite. ${q.explanation}`;
         feedback.style.color = 'var(--red)';
     }
+    quizAnswerHistory[currentQuestionIndex] = currentSelectedOption;
 
     btn.textContent = currentQuestionIndex === activeQuizQuestions.length - 1 ? 'See results' : 'Next question';
 });
 
 function startInteractiveQuiz(quizId) {
+    if (currentRole !== 'student') return;
+    const student = getCurrentStudent();
     const q = publishedQuizzes.find((item) => item.id === quizId);
-    if (!q || !q.questions || !q.questions.length) return;
+    if (!student || !q || q.status !== 'Published' || q.targetClass !== student.classId || !q.questions?.length) return;
+    const attempts = quizAttempts.filter((attempt) => attempt.quizId === q.id && attempt.studentId === student.id);
+    if (attempts.length && q.retryAllowed === false) {
+        showMessage('quiz-feedback', 'A second attempt is not allowed for this quiz.', 'error');
+        return;
+    }
 
     currentCustomQuizId = q.id;
     currentQuizTopic = q.subject;
     activeQuizQuestions = q.questions;
     currentQuestionIndex = 0;
     interactiveScore = 0;
-    document.getElementById('quiz-score').textContent = '0';
+    quizAnswerHistory = [];
+    currentQuizAttemptSaved = false;
+    document.getElementById('quiz-score').textContent = `0 / ${getQuizMaximumScore(activeQuizQuestions)}`;
     renderInteractiveQuestion();
     document.getElementById('question-text').scrollIntoView({ behavior: 'smooth' });
 }
@@ -4782,7 +5100,15 @@ function renderTransportInfo() {
     const student = getCurrentStudent();
     if (!student) return;
 
-    const route = transportRoutes.find((r) => r.id === student.transportRouteId) || transportRoutes[0];
+    const route = transportRoutes.find((r) => r.id === student.transportRouteId);
+    const routeFields = ['transport-route-num', 'transport-route-name', 'transport-pickup-time', 'transport-vehicle', 'transport-driver', 'transport-driver-contact', 'transport-coordinator', 'transport-status'];
+    if (!route) {
+        document.getElementById('transport-subtitle').textContent = `Transport details for ${student.name}.`;
+        routeFields.forEach((id) => { const element = document.getElementById(id); if (element) element.textContent = '—'; });
+        const stopsContainer = document.getElementById('transport-stops-list');
+        if (stopsContainer) stopsContainer.innerHTML = '<p class="muted">No transport route assigned.</p>';
+        return;
+    }
 
     document.getElementById('transport-subtitle').textContent = `Assigned transport details for ${student.name} (${student.className}-${student.section}).`;
     document.getElementById('transport-route-num').textContent = route.routeNumber;
@@ -4826,8 +5152,8 @@ function renderStudentDashboard() {
     document.getElementById('student-stat-homework').textContent = activeHw.length;
 
     // Demo metrics clearly labeled
-    document.getElementById('student-stat-streak').textContent = '12 days';
-    document.getElementById('student-stat-rank').textContent = '#08 of 42';
+    document.getElementById('student-stat-streak').textContent = 'Not Available';
+    document.getElementById('student-stat-rank').textContent = 'Not Available';
 
     // Recent published marks
     const recentMarksList = document.getElementById('student-recent-marks-list');
@@ -4842,6 +5168,7 @@ function renderStudentDashboard() {
 function renderTeacherDashboard() {
     const teacher = currentAccount;
     if (!teacher || teacher.role !== 'teacher') return;
+    renderTeacherMarksVerificationQueue();
 
     const teacherClasses = getTeacherClasses(teacher);
     document.getElementById('teacher-assigned-classes').textContent = teacherClasses.length;
@@ -4852,10 +5179,14 @@ function renderTeacherDashboard() {
 
     // Today's attendance for teacher classes (using dailyResult)
     const todayAtt = attendanceRecords.filter((r) => r.date === todayISO && teacherClassIds.includes(r.classId));
-    const presentCount = todayAtt.filter((r) => r.dailyResult === 'Full Day' || r.dailyResult === 'Half Day').length;
-    const rate = todayAtt.length ? Math.round((presentCount / todayAtt.length) * 100) : 0;
+    const fullDays = todayAtt.filter((record) => record.dailyResult === 'Full Day').length;
+    const halfDays = todayAtt.filter((record) => record.dailyResult === 'Half Day').length;
+    const attendedDayEquivalents = fullDays + halfDays * 0.5;
+    const rate = todayAtt.length ? Math.round((attendedDayEquivalents / todayAtt.length) * 100) : 0;
     document.getElementById('teacher-attendance-rate').textContent = `${rate}%`;
-    document.getElementById('teacher-attendance-count').textContent = `${presentCount} present today`;
+    document.getElementById('teacher-attendance-count').textContent = `${attendedDayEquivalents} day-equivalents attended today`;
+    const attendanceAction = document.getElementById('teacher-take-attendance-action');
+    if (attendanceAction) attendanceAction.classList.toggle('hidden', !teacherHasClassTeacherResponsibility());
 
     // Homework count & pending reviews for authorized subjects
     const assignedHw = homeworkRecords.filter((h) => teacherCanManageSubject(h.classId, h.subject));
@@ -4937,7 +5268,8 @@ function viewTeacherStudentProfile(studentId) {
 
     if (title) title.textContent = `Student Profile: ${student.name}`;
     const att = getStudentAttendanceSummary(student.id);
-    const parent = parents.find((p) => p.id === student.parentId) || { name: student.parentName, phone: student.parentMobile, email: '—' };
+    if (currentRole !== 'teacher' || !teacherCanViewClass(student.classId)) return;
+    const parent = parents.find((p) => p.id === student.parentAccountId) || { name: student.parentName, phone: student.parentMobile, email: '—' };
     const marks = marksRecords.filter((m) => m.studentId === student.id && m.status === 'Published');
 
     content.innerHTML = `
@@ -4949,7 +5281,6 @@ function viewTeacherStudentProfile(studentId) {
                 <p><b>Class & Section:</b> ${escapeHtml(student.className)}-${escapeHtml(student.section)} (Roll: ${escapeHtml(student.roll)})</p>
                 <p><b>Date of Birth:</b> ${escapeHtml(student.dob || '—')}</p>
                 <p><b>Blood Group:</b> ${escapeHtml(student.bloodGroup || '—')}</p>
-                <p><b>Address:</b> ${escapeHtml(student.address || '—')}</p>
             </div>
             <div>
                 <h4>Parent & Guardian Details</h4>
@@ -4993,6 +5324,12 @@ document.getElementById('parent-meeting-form')?.addEventListener('submit', (even
     const date = document.getElementById('meeting-date').value;
     const time = document.getElementById('meeting-time').value;
     const purpose = document.getElementById('meeting-purpose').value.trim();
+    const availableTeachers = getParentCommunicationTeachers(child);
+    if (currentRole !== 'parent' || !child || !getLinkedStudentsForParent().some((item) => item.id === child.id) || !availableTeachers.some((item) => item.id === teacherId) || !purpose) return;
+    if (date < todayISO) {
+        showMessage('parent-meeting-message', 'Preferred meeting date cannot be in the past.', 'error');
+        return;
+    }
 
     const newMeeting = {
         id: `meet-${Date.now()}`,
@@ -5025,8 +5362,8 @@ function renderParentMeetingHistory() {
     if (!list) return;
 
     if (childDisplay && child) childDisplay.value = `${child.name} (${child.className}-${child.section})`;
-    if (teacherSelect && teacherSelect.options.length === 0) {
-        teacherSelect.innerHTML = teachers.map((t) => {
+    if (teacherSelect && child) {
+        teacherSelect.innerHTML = getParentCommunicationTeachers(child).map((t) => {
             const teacherSubs = [...new Set(getSubjectAllocationsForTeacher(t.id).map((a) => a.subject))];
             return `<option value="${t.id}">${escapeHtml(t.name)}${teacherSubs.length ? ` (${teacherSubs.join(', ')})` : ''}</option>`;
         }).join('');
@@ -5098,7 +5435,7 @@ function populateHallTicketStudents() {
     if (currentRole === 'teacher') {
         const teacherClasses = getTeacherClasses(currentAccount);
         const classIds = teacherClasses.map((c) => c.id);
-        availableStudents = availableStudents.filter((s) => classIds.includes(s.classId));
+        availableStudents = availableStudents.filter((s) => classIds.includes(s.classId) && teacherCanViewClass(s.classId));
     } else if (currentRole === 'parent') {
         availableStudents = getLinkedStudentsForParent();
     } else if (currentRole === 'student') {
@@ -5117,12 +5454,35 @@ function refreshHallTicketEligibility() {
     const eligibility = document.getElementById('hall-ticket-eligibility');
     const generateButton = document.getElementById('hall-ticket-generate');
     const feesButton = document.getElementById('hall-ticket-go-fees');
-    if (!student) { if (details) details.innerHTML = '<p class="muted">No student selected.</p>'; return; }
-    const overdue = getStudentInvoices(student.id).some((invoice) => Number(invoice.balance ?? invoice.amount) > 0 && invoice.dueDate < todayISO);
-    if (details) details.innerHTML = `<p><b>Student Name:</b> ${escapeHtml(student.name)}</p><p><b>Class & Section:</b> ${escapeHtml(student.className)}-${escapeHtml(student.section)}</p><p><b>Exam:</b> ${escapeHtml(document.getElementById('hall-ticket-exam')?.value || '')}</p><p><b>Fee Status:</b> ${overdue ? 'Outstanding' : 'Cleared'}</p>`;
-    if (eligibility) { eligibility.textContent = overdue ? '❌ Not Eligible · Reason: Outstanding Fee Balance' : '✅ Eligible · Fee Status: Cleared'; eligibility.className = `form-message ${overdue ? 'error' : ''}`; }
-    if (generateButton) generateButton.disabled = overdue;
-    if (feesButton) feesButton.classList.toggle('hidden', !overdue);
+    document.getElementById('hall-ticket-admin-controls')?.classList.toggle('hidden', currentRole !== 'admin');
+    if (!student) { if (details) details.innerHTML = '<p class="muted">Student record is unavailable.</p>'; return; }
+    if (currentRole === 'teacher' && !teacherCanViewClass(student.classId)) { if (details) details.innerHTML = '<p class="muted">Student record is unavailable.</p>'; return; }
+    const exam = document.getElementById('hall-ticket-exam')?.value || '';
+    const result = getHallTicketEligibility(student, exam);
+    if (details) details.innerHTML = `<p><b>Student Name:</b> ${escapeHtml(student.name)}</p><p><b>Class & Section:</b> ${escapeHtml(student.className)}-${escapeHtml(student.section)}</p><p><b>Exam:</b> ${escapeHtml(exam)}</p><p><b>Fee Status:</b> ${result.outstandingAmount > 0 ? `Outstanding (₹${result.outstandingAmount.toLocaleString('en-IN')})` : 'Cleared'}</p><p><b>Eligibility:</b> ${result.eligible ? 'Eligible' : 'Blocked'}</p>`;
+    if (eligibility) { eligibility.textContent = result.eligible ? 'Eligible' : `Not Eligible · ${result.reasons.join(' ')}`; eligibility.className = `form-message ${result.eligible ? '' : 'error'}`; }
+    if (generateButton) generateButton.disabled = !result.eligible;
+    if (feesButton) feesButton.classList.toggle('hidden', !(currentRole === 'parent' && result.outstandingAmount > 0));
+}
+
+function setHallTicketRelease(released) {
+    if (currentRole !== 'admin') return;
+    const student = getHallTicketStudent();
+    const exam = document.getElementById('hall-ticket-exam')?.value;
+    if (!student || !exam) return;
+    student.hallTicketReleases = { ...(student.hallTicketReleases || {}), [exam]: released };
+    saveStore('students', students);
+    refreshHallTicketEligibility();
+}
+
+function setHallTicketApproval(approved) {
+    if (currentRole !== 'admin') return;
+    const student = getHallTicketStudent();
+    const exam = document.getElementById('hall-ticket-exam')?.value;
+    if (!student || !exam) return;
+    student.hallTicketApprovals = { ...(student.hallTicketApprovals || {}), [exam]: approved };
+    saveStore('students', students);
+    refreshHallTicketEligibility();
 }
 
 function generateHallTicket() {
@@ -5140,8 +5500,15 @@ function generateHallTicket() {
         return;
     }
 
-    const overdue = getStudentInvoices(student.id).some((invoice) => Number(invoice.balance ?? invoice.amount) > 0 && invoice.dueDate < todayISO);
-    if (overdue) { refreshHallTicketEligibility(); return; }
+    const eligibility = getHallTicketEligibility(student, exam);
+    if (!eligibility.eligible) {
+        if (msg) {
+            msg.textContent = currentRole === 'student' && eligibility.outstandingAmount > 0 ? 'Contact your Parent/Guardian or School Office.' : eligibility.reasons.join(' ');
+            msg.className = 'form-message error';
+        }
+        refreshHallTicketEligibility();
+        return;
+    }
     const content = `<div class="print-document"><h2>${escapeHtml(schoolSettings.name)}</h2><p>Prototype Hall Ticket</p><p><b>Student Name:</b> ${escapeHtml(student.name)}</p><p><b>Admission Number:</b> ${escapeHtml(student.admissionNumber)}</p><p><b>Class & Section:</b> ${escapeHtml(student.className)}-${escapeHtml(student.section)}</p><p><b>Exam:</b> ${escapeHtml(exam)}</p><p><b>School instructions:</b> Bring this prototype document and arrive before the scheduled examination.</p></div>`;
     printStandaloneDocument('Hall Ticket', content);
     if (msg) { msg.textContent = `Hall ticket for ${student.name} generated successfully.`; msg.className = 'form-message'; }
@@ -5244,6 +5611,8 @@ function loadSettingsForm() {
     });
     const passInput = document.getElementById('setting-pass-percentage');
     if (passInput) passInput.value = schoolSettings.passPercentage || 35;
+    const hallTicketPolicy = document.getElementById('setting-hall-ticket-policy');
+    if (hallTicketPolicy) hallTicketPolicy.value = schoolSettings.hallTicketPolicy || 'Always Eligible';
 }
 
 document.getElementById('settings-form')?.addEventListener('submit', (event) => {
@@ -5254,6 +5623,7 @@ document.getElementById('settings-form')?.addEventListener('submit', (event) => 
         if (input) schoolSettings[k] = input.value.trim();
     });
     schoolSettings.passPercentage = Math.max(1, Math.min(100, Number(document.getElementById('setting-pass-percentage')?.value || 35)));
+    schoolSettings.hallTicketPolicy = document.getElementById('setting-hall-ticket-policy')?.value || 'Always Eligible';
 
     saveStore('schoolSettings', schoolSettings);
     applySchoolSettings();
