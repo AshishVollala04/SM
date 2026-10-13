@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FutureSchool | School Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Portal -->
+    <div id="login-page" class="login-page">
+        <div class="login-copy">
+            <p class="eyebrow">FUTURESCHOOL PLATFORM</p>
+            <h1>One calm place for your whole school.</h1>
+            <p>Attendance, learning, fees and family communication in one connected workspace.</p>
+            <div class="login-highlights">
+                <span>01 / Learn</span>
+                <span>02 / Manage</span>
+                <span>03 / Connect</span>
+            </div>
+        </div>
+        <form id="login-form" class="login-card">
+            <div class="brand-mark">FS</div>
+            <h2>Welcome back</h2>
+            <p class="muted">Sign in to your school workspace</p>
+            <label for="login-email">Email address</label>
+            <input id="login-email" type="email" placeholder="you@school.edu" required>
+            <label for="login-password">Password</label>
+            <div class="password-field">
+                <input id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+                <button id="toggle-login-password" class="light-button small" type="button" aria-controls="login-password" aria-pressed="false">Show password</button>
+            </div>
+            <label for="login-role">Sign in as</label>
+            <select id="login-role">
+                <option value="student">Student</option>
+                <option value="parent">Parent</option>
+                <option value="teacher">Teacher</option>
+                <option value="admin">Admin</option>
+            </select>
+            <button class="primary-button" type="submit">Enter workspace</button>
+            <p id="login-message" class="form-message"></p>
+            <div class="demo-accounts">
+                <strong>Demo accounts:</strong><br>
+                Student: <code>student@school.edu</code> / <code>student123</code><br>
+                Parent: <code>parent@school.edu</code> / <code>parent123</code><br>
+                Teacher: <code>teacher@school.edu</code> / <code>teacher123</code><br>
+                Admin: <code>admin@school.edu</code> / <code>admin123</code>
+            </div>
+            <p class="prototype-notice">Prototype only. A production version requires a secure backend, encrypted passwords, server-side authorization, and a database.</p>
+        </form>
+    </div>
+
+    <!-- Application Shell -->
+    <div id="app" class="app hidden">
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+        <aside id="sidebar" class="sidebar">
+            <button id="sidebar-close" class="sidebar-close" type="button" aria-label="Close menu">×</button>
+            <a class="brand" href="#" onclick="goHome(event)">
+                <span class="brand-mark">FS</span>
+                <span id="app-brand-name">FutureSchool</span>
+            </a>
+            <p class="sidebar-label">Navigation</p>
+            <nav id="side-nav" class="side-nav">
+                <!-- Grouped navigation buttons populated dynamically based on role -->
+            </nav>
+            <button class="logout-button" onclick="logout()">Log out</button>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">☰</button>
+                <div>
+                    <p class="eyebrow">SCHOOL OPERATIONS</p>
+                    <h2 id="page-title">Dashboard</h2>
+                </div>
+                <div class="profile">
+                    <select id="language-select" aria-label="Language">
+                        <option value="en">English</option>
+                        <option value="te">తెలుగు Preview</option>
+                    </select>
+                    <span id="current-academic-year" class="status info">2026-2027</span>
+                    <button id="help-button" class="light-button small" type="button" onclick="openHelp()">Help</button>
+                    <span id="user-role" class="role-tag">Student</span>
+                    <span id="user-avatar" class="avatar">A</span>
+                </div>
+            </header>
+
+            <!-- ==================== ADMIN PAGES ==================== -->
+            <!-- Admin Dashboard -->
+            <section id="page-admin-dashboard" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">SCHOOL MANAGEMENT</p>
+                    <h1>Admin dashboard</h1>
+                    <p>Monitor the school at a glance and act on the work that needs attention.</p>
+                </div>
+                <div class="panel quick-actions-panel">
+                    <div class="panel-heading"><h3>Quick actions</h3><span class="status info">Today</span></div>
+                    <div class="quick-actions-grid">
+                        <button type="button" onclick="showPage('admissions')">Add student</button>
+                        <button type="button" onclick="showPage('fees')">Mark cash payment</button>
+                        <button type="button" onclick="showPage('admin-defaulters')">View fee defaulters</button>
+                        <button type="button" onclick="showPage('attendance')">View attendance report</button>
+                        <button type="button" onclick="showPage('notifications')">Publish notice</button>
+                        <button type="button" onclick="showPage('reports')">Generate report card</button>
+                    </div>
+                </div>
+                <div class="stats admin-stats">
+                    <div class="stat-card"><span>Total students</span><strong id="admin-total-students">0</strong><small>Enrolled students</small></div>
+                    <div class="stat-card"><span>Total teachers</span><strong id="admin-total-teachers">0</strong><small>Active faculty</small></div>
+                    <div class="stat-card"><span>Total parents</span><strong id="admin-total-parents">0</strong><small>Linked families</small></div>
+                    <div class="stat-card"><span>Total classes</span><strong id="admin-total-classes">0</strong><small>Active sections</small></div>
+                    <div class="stat-card"><span>Today's attendance</span><strong id="admin-attendance-rate">0%</strong><small id="admin-attendance-status-label">Today's report</small></div>
+                    <div class="stat-card"><span>Fees collected</span><strong id="admin-fees-collected">₹0</strong><small>Recorded payments</small></div>
+                    <div class="stat-card"><span>Pending fees</span><strong id="admin-fees-pending">₹0</strong><small>Outstanding balance</small></div>
+                    <div class="stat-card"><span>Pending admissions</span><strong id="admin-pending-admissions">0</strong><small>Need review</small></div>
+                </div>
+                <div class="stats admin-stats"><div class="stat-card"><span>Teachers present</span><strong id="admin-teachers-present">0</strong><small>Today</small></div><div class="stat-card"><span>Teachers absent</span><strong id="admin-teachers-absent">0</strong><small>Admin records</small></div><div class="stat-card"><span>Teachers on leave</span><strong id="admin-teachers-leave">0</strong><small>Today</small></div><div class="stat-card"><span>Marks awaiting verification</span><strong id="admin-marks-awaiting">0</strong><small>Submitted records</small></div><div class="stat-card"><span>Open complaints</span><strong id="admin-open-complaints">0</strong><small>Current cases</small></div><div class="stat-card"><span>Urgent complaints</span><strong id="admin-urgent-complaints">0</strong><small>Current cases</small></div><div class="stat-card"><span>Meetings today</span><strong id="admin-meetings-today">0</strong><small>Requests</small></div></div>
+                <div class="panel"><div class="panel-heading"><h3>Class performance overview</h3><span class="status info">Factual summary</span></div><div id="admin-class-performance-overview" class="account-list"></div></div>
+
+                <!-- Admin Action Panels -->
+                <div class="two-column">
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Classes without attendance today</h3>
+                            <button class="text-button" type="button" onclick="showPage('attendance')">Open attendance</button>
+                        </div>
+                        <div id="admin-unsubmitted-attendance-list" class="calendar-list"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Recent payments</h3>
+                            <button class="text-button" type="button" onclick="showPage('admin-payments')">All payments</button>
+                        </div>
+                        <div id="admin-recent-payments-list" class="calendar-list"></div>
+                    </div>
+                </div>
+
+                <div class="two-column">
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Fee defaulters</h3>
+                            <button class="text-button" type="button" onclick="showPage('admin-defaulters')">View defaulters</button>
+                        </div>
+                        <div id="admin-defaulters-preview" class="calendar-list"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Pending admissions</h3>
+                            <button class="text-button" type="button" onclick="showPage('admissions')">Manage admissions</button>
+                        </div>
+                        <div id="admin-admissions-list" class="calendar-list"></div>
+                    </div>
+                </div>
+
+                <div class="two-column">
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Pending report-card publication</h3>
+                            <button class="text-button" type="button" onclick="showPage('marks')">Marks & reports</button>
+                        </div>
+                        <div id="admin-pending-reports-list" class="calendar-list"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Recent notices</h3>
+                            <button class="text-button" type="button" onclick="showPage('notifications')">Publish notice</button>
+                        </div>
+                        <div id="admin-recent-notices-list" class="calendar-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admissions -->
+            <section id="page-admissions" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">CORE OPERATIONS</p>
+                    <h1>Admissions</h1>
+                    <p>Add new student enrollments, assign families, and maintain academic records.</p>
+                </div>
+                <div class="two-column">
+                    <form id="admission-form" class="panel form-panel">
+                        <h3>New student admission</h3>
+                        <label for="admission-name">Full name</label>
+                        <input id="admission-name" required placeholder="e.g. Kavya Rao">
+                        <label for="admission-number">Admission number</label>
+                        <input id="admission-number" required placeholder="FS-2026-043">
+                        <label for="admission-dob">Date of birth</label>
+                        <input id="admission-dob" type="date" required>
+                        <div class="form-grid">
+                            <label for="admission-class">Class
+                                <select id="admission-class"></select>
+                            </label>
+                            <label for="admission-roll">Roll number
+                                <input id="admission-roll" type="number" min="1" required placeholder="e.g. 21">
+                            </label>
+                        </div>
+                        <label for="admission-parent">Parent / Guardian name</label>
+                        <input id="admission-parent" required placeholder="e.g. Suresh Rao">
+                        <div class="form-grid">
+                            <label for="admission-mobile">Parent mobile
+                                <input id="admission-mobile" type="tel" required placeholder="+91 90000 00000">
+                            </label>
+                            <label for="admission-email">Parent email
+                                <input id="admission-email" type="email" required placeholder="parent@school.edu">
+                            </label>
+                        </div>
+                        <label for="admission-address">Residential address</label>
+                        <textarea id="admission-address" rows="3" required placeholder="Enter the student's residential address"></textarea>
+                        <label for="admission-status">Admission status</label>
+                        <select id="admission-status">
+                            <option value="Active">Active</option>
+                            <option value="Pending">Pending review</option>
+                        </select>
+                        <button class="primary-button" type="submit">Submit admission</button>
+                        <p id="admission-message" class="form-message" aria-live="polite"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Admissions roster</h3>
+                            <span class="status info">Stored in browser prototype</span>
+                        </div>
+                        <div id="student-record-list" class="account-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Students Management -->
+            <section id="page-admin-students" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">PEOPLE</p>
+                    <h1>Students directory</h1>
+                    <p>Search, view full academic profile, edit details, change class & section, and manage active status.</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3>All students</h3>
+                        <input id="admin-student-search" class="compact-input" placeholder="Search by name, roll, or ID...">
+                    </div>
+                    <div id="admin-students-table-container">
+                        <table id="admin-students-table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Admission No</th>
+                                    <th>Class & Section</th>
+                                    <th>Parent / Family</th>
+                                    <th>Attendance</th>
+                                    <th>Fee Balance</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Student Profile Modal / Detail Panel -->
+                <div id="student-profile-panel" class="panel hidden" style="margin-top:20px;">
+                    <div class="panel-heading">
+                        <h3 id="student-profile-title">Student Profile</h3>
+                        <button class="light-button small" type="button" onclick="closeStudentProfile()">Close profile</button>
+                    </div>
+                    <div id="student-profile-content"></div>
+                </div>
+            </section>
+
+            <!-- Admin Teachers Management -->
+            <section id="page-admin-teachers" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">PEOPLE</p>
+                    <h1>Teachers directory</h1>
+                    <p>Add faculty members and maintain contact, division, and portal details. Class and subject responsibilities are managed in Class Management and Subject Allocation.</p>
+                </div>
+                <div class="two-column">
+                    <form id="teacher-manage-form" class="panel form-panel">
+                        <h3 id="teacher-form-title">Add teacher</h3>
+                        <input id="teacher-manage-id" type="hidden">
+                        <label for="teacher-manage-name">Teacher name</label>
+                        <input id="teacher-manage-name" required placeholder="e.g. Ms. Archana Nair">
+                        <label for="teacher-manage-email">Email address</label>
+                        <input id="teacher-manage-email" type="email" required placeholder="teacher@school.edu">
+                        <label for="teacher-manage-phone">Phone number</label>
+                        <input id="teacher-manage-phone" required placeholder="+91 98888 00000">
+                        <label for="teacher-manage-type">Teacher division</label>
+                        <select id="teacher-manage-type"><option>Pre Primary</option><option>Primary</option><option>Senior</option></select>
+                        <button class="primary-button" type="submit">Save teacher</button>
+                        <p id="teacher-manage-message" class="form-message"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Faculty list</h3>
+                            <input id="teacher-search-input" class="compact-input" placeholder="Search faculty...">
+                        </div>
+                        <div id="admin-teachers-list" class="account-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Parents Management -->
+            <section id="page-admin-parents" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">PEOPLE</p>
+                    <h1>Parents directory</h1>
+                    <p>Manage linked parent accounts, update contact information, and configure student family ties.</p>
+                </div>
+                <div class="two-column">
+                    <form id="parent-manage-form" class="panel form-panel">
+                        <h3 id="parent-form-title">Add parent record</h3>
+                        <input id="parent-manage-id" type="hidden">
+                        <label for="parent-manage-name">Parent full name</label>
+                        <input id="parent-manage-name" required placeholder="e.g. Rajesh Sharma">
+                        <label for="parent-manage-email">Email address</label>
+                        <input id="parent-manage-email" type="email" required placeholder="parent@school.edu">
+                        <label for="parent-manage-phone">Phone number</label>
+                        <input id="parent-manage-phone" required placeholder="+91 90000 00000">
+                        <label for="parent-manage-children">Link children (Hold Ctrl/Cmd to select multiple)</label>
+                        <select id="parent-manage-children" multiple size="3"></select>
+                        <button class="primary-button" type="submit">Save parent</button>
+                        <p id="parent-manage-message" class="form-message"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Registered parents</h3>
+                            <input id="parent-search-input" class="compact-input" placeholder="Search parents...">
+                        </div>
+                        <div id="admin-parents-list" class="account-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- User Accounts (formerly Admin records) -->
+            <section id="page-admin" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">PEOPLE & SECURITY</p>
+                    <h1>User accounts</h1>
+                    <p>Create login credentials, reset temporary passwords, and activate or deactivate system accounts.</p>
+                </div>
+                <div class="two-column">
+                    <form id="account-form" class="panel form-panel">
+                        <h3>Create login account</h3>
+                        <label for="account-name">Full name</label>
+                        <input id="account-name" placeholder="e.g. Priya Menon" required>
+                        <label for="account-email">Login email</label>
+                        <input id="account-email" type="email" placeholder="name@school.edu" required>
+                        <label for="account-role">Role</label>
+                        <select id="account-role">
+                            <option value="student">Student</option>
+                            <option value="parent">Parent</option>
+                            <option value="teacher">Teacher</option>
+                        </select>
+                        <div id="account-role-specific-fields">
+                            <div id="account-student-field"><label for="account-student-select">Link to student profile</label><select id="account-student-select"></select></div>
+                            <div id="account-parent-field" class="hidden"><label for="account-parent-select">Link to parent profile</label><select id="account-parent-select"></select></div>
+                            <div id="account-teacher-field" class="hidden"><label for="account-teacher-select">Link to teacher profile</label><select id="account-teacher-select"></select></div>
+                        </div>
+                        <label for="account-password">Temporary password</label>
+                        <div class="password-field">
+                            <input id="account-password" type="password" value="welcome123" autocomplete="new-password" minlength="8" required>
+                            <button id="toggle-account-password" class="light-button small" type="button" aria-controls="account-password" aria-pressed="false">Show password</button>
+                        </div>
+                        <button class="primary-button" type="submit">Create login</button>
+                        <p id="account-message" class="form-message" aria-live="polite"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Workspace logins</h3>
+                            <span class="status info">Prototype login records</span>
+                        </div>
+                        <div id="account-list" class="account-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Class Management -->
+            <section id="page-classes" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">CORE OPERATIONS</p>
+                    <h1>Class management</h1>
+                    <p>Create class sections, assign teachers, and monitor enrollment.</p>
+                </div>
+                <div class="two-column">
+                    <form id="class-form" class="panel form-panel">
+                        <h3>Create class section</h3>
+                        <label for="class-name">Class name</label>
+                        <select id="class-name" required><option value="Nursery">Nursery</option><option value="LKG">LKG</option><option value="UKG">UKG</option><option value="Class 1">Class 1</option><option value="Class 2">Class 2</option><option value="Class 3">Class 3</option><option value="Class 4">Class 4</option><option value="Class 5">Class 5</option><option value="Class 6">Class 6</option><option value="Class 7">Class 7</option><option value="Class 8">Class 8</option><option value="Class 9">Class 9</option><option value="Class 10">Class 10</option></select>
+                        <label for="class-section">Section</label>
+                        <input id="class-section" required placeholder="e.g. A">
+                        <label for="class-school-level">School level</label>
+                        <select id="class-school-level"><option>Pre Primary</option><option>Primary</option><option>Senior</option></select>
+                        <label for="class-teacher">Class teacher</label>
+                        <select id="class-teacher"></select>
+                        <button class="primary-button" type="submit">Create class</button>
+                        <p id="class-message" class="form-message"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Active classes</h3>
+                            <span class="status info">School roster</span>
+                        </div>
+                        <div id="class-record-list" class="account-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-subject-allocation" class="page">
+                <div class="page-intro"><p class="eyebrow">ACADEMIC ADMINISTRATION</p><h1>Subject allocation</h1><p>Assign each class subject to an eligible teacher. Class teachers are managed from Class Management.</p></div>
+                <div class="two-column"><form id="subject-allocation-form" class="panel form-panel"><label for="allocation-academic-year">Academic year<select id="allocation-academic-year"></select></label><label for="allocation-class">Class section<select id="allocation-class"></select></label><label for="allocation-class-teacher">Class teacher<select id="allocation-class-teacher"></select></label><label for="allocation-subject">Subject<select id="allocation-subject"></select></label><label for="allocation-teacher">Subject teacher<select id="allocation-teacher"></select></label><label for="pre-primary-subjects">Pre Primary subjects, comma-separated<textarea id="pre-primary-subjects" rows="2" placeholder="Language, Numeracy, Creative Play"></textarea></label><button class="primary-button" type="submit">Save allocation</button><p id="allocation-message" class="form-message" aria-live="polite"></p></form><div class="panel"><div class="panel-heading"><h3>Current allocations</h3></div><div id="subject-allocation-list" class="account-list"></div></div></div>
+            </section>
+
+            <!-- Admin Payments Ledger -->
+            <section id="page-admin-payments" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FINANCE</p>
+                    <h1>Payments ledger</h1>
+                    <p>Review all fee payment transactions recorded across bank transfers, UPI, and school cash payments.</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3>Payment transactions</h3>
+                        <button class="light-button small" type="button" onclick="window.print()">Print ledger</button>
+                    </div>
+                    <table id="admin-payments-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Student</th>
+                                <th>Invoice</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Admin Fee Defaulters -->
+            <section id="page-admin-defaulters" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FINANCE</p>
+                    <h1>Fee defaulters</h1>
+                    <p>Identify outstanding fee balances past due date and send reminders directly to linked parents.</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3>Overdue fee accounts</h3>
+                        <button class="primary-button small" type="button" onclick="sendDefaulterReminders()">Send fee reminders to all</button>
+                    </div>
+                    <p id="defaulter-bulk-message" class="form-message"></p>
+                    <table id="admin-defaulters-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Invoice</th>
+                                <th>Due Date</th>
+                                <th>Amount Overdue</th>
+                                <th>Parent Contact</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="page-academic-years" class="page">
+                <div class="page-intro"><p class="eyebrow">ADMINISTRATION</p><h1>Academic years</h1><p>Keep each school year separate while selecting one current reporting context.</p></div>
+                <div class="two-column">
+                    <form id="academic-year-form" class="panel form-panel"><h3>Create academic year</h3><label for="academic-year-name">Name<input id="academic-year-name" required placeholder="2027-2028"></label><div class="form-grid"><label for="academic-year-start">Start date<input id="academic-year-start" type="date" required></label><label for="academic-year-end">End date<input id="academic-year-end" type="date" required></label></div><button class="primary-button" type="submit">Save academic year</button><p id="academic-year-message" class="form-message"></p></form>
+                    <div class="panel"><div class="panel-heading"><h3>Saved years</h3><span class="status info">Historical data retained</span></div><div id="academic-year-list" class="account-list"></div></div>
+                </div>
+            </section>
+
+            <section id="page-promotion" class="page">
+                <div class="page-intro"><p class="eyebrow">ADMINISTRATION</p><h1>Student promotion</h1><p>Move active students into a new year and preserve their historical records.</p></div>
+                <form id="promotion-form" class="panel form-panel"><div class="form-grid"><label for="promotion-from-year">From year<select id="promotion-from-year"></select></label><label for="promotion-to-year">To year<select id="promotion-to-year"></select></label><label for="promotion-class">Current class<select id="promotion-class"></select></label><label for="promotion-destination">Destination class<select id="promotion-destination"></select></label></div><div id="promotion-student-list" class="checkbox-list"></div><label for="promotion-status">Action<select id="promotion-status"><option>Promote</option><option>Repeat same class</option><option>Graduated</option><option>Transferred</option></select></label><button class="primary-button" type="submit">Confirm promotion</button><p id="promotion-message" class="form-message"></p></form>
+                <div class="panel"><div class="panel-heading"><h3>Promotion history</h3></div><div id="promotion-history-list" class="account-list"></div></div>
+            </section>
+
+            <section id="page-certificates" class="page">
+                <div class="page-intro"><p class="eyebrow">ADMINISTRATION</p><h1>Certificates</h1><p>Generate printable student certificates from current records.</p></div>
+                <div class="two-column"><form id="certificate-form" class="panel form-panel"><label for="certificate-type">Certificate type<select id="certificate-type"><option>Bonafide Certificate</option><option>Study Certificate</option><option>Transfer Certificate</option><option>Fee Payment Certificate</option><option>Character Certificate</option></select></label><label for="certificate-student">Student<select id="certificate-student"></select></label><label for="certificate-purpose">Purpose<input id="certificate-purpose" placeholder="Optional purpose"></label><label for="certificate-date">Issue date<input id="certificate-date" type="date" required></label><button class="primary-button" type="submit">Generate certificate</button><p id="certificate-message" class="form-message"></p></form><div id="certificate-preview" class="report-preview"><p class="muted">Select a student and generate a certificate.</p></div></div><div class="panel"><div class="panel-heading"><h3>Issued history</h3></div><div id="certificate-history-list" class="account-list"></div></div>
+            </section>
+
+            <section id="page-staff-attendance" class="page">
+                <div class="page-intro"><p class="eyebrow">ADMINISTRATION</p><h1>Staff attendance</h1><p>Record daily faculty presence and correct entries when needed.</p></div>
+                <div class="panel"><div class="form-grid"><label for="staff-attendance-date">Date<input id="staff-attendance-date" type="date"></label><div><button class="light-button" type="button" onclick="markAllStaffPresent()">Mark all present</button></div></div><div id="staff-attendance-list" class="account-list"></div><button class="primary-button" type="button" onclick="saveStaffAttendance()">Save attendance</button><p id="staff-attendance-message" class="form-message"></p></div>
+                <div class="panel"><div class="panel-heading"><h3>Monthly summary</h3></div><div id="staff-attendance-summary"></div></div>
+                <div id="teacher-self-attendance-panel" class="panel hidden"><div class="panel-heading"><h3>My attendance</h3><span class="status info">Present or Leave</span></div><form id="teacher-self-attendance-form"><label for="teacher-self-attendance-date">Date<input id="teacher-self-attendance-date" type="date" required></label><label for="teacher-self-attendance-status">Status<select id="teacher-self-attendance-status"><option>Present</option><option>Leave</option></select></label><button class="primary-button" type="submit">Submit attendance</button><p id="teacher-self-attendance-message" class="form-message" aria-live="polite"></p></form></div>
+            </section>
+
+            <section id="page-calendar" class="page">
+                <div class="page-intro"><p class="eyebrow">SCHOOL OPERATIONS</p><h1>School calendar</h1><p>Important dates shared with the right school audience.</p></div>
+                <div class="two-column"><form id="calendar-form" class="panel form-panel"><label for="calendar-title">Event title<input id="calendar-title" required></label><div class="form-grid"><label for="calendar-type">Type<select id="calendar-type"><option>Holiday</option><option>Examination</option><option>Parent Meeting</option><option>School Event</option><option>Sports Event</option><option>Fee Due Date</option><option>Academic Deadline</option></select></label><label for="calendar-audience">Audience<select id="calendar-audience"><option>Everyone</option><option>Teachers</option><option>Parents</option><option>Students</option></select></label></div><div class="form-grid"><label for="calendar-start">Start<input id="calendar-start" type="date" required></label><label for="calendar-end">End<input id="calendar-end" type="date" required></label></div><label for="calendar-description">Description<textarea id="calendar-description" rows="3"></textarea></label><button class="primary-button" type="submit">Add event</button><p id="calendar-message" class="form-message"></p></form><div class="panel"><div class="panel-heading"><h3>Upcoming dates</h3><select id="calendar-filter" class="compact-select" onchange="renderCalendar()"><option value="all">All types</option></select></div><div id="calendar-list" class="calendar-list"></div></div></div>
+            </section>
+
+            <section id="page-messages" class="page">
+                <div class="page-intro"><p class="eyebrow">FAMILY COMMUNICATION</p><h1>Parent messages</h1><p>Keep direct teacher conversations separate from school notifications.</p></div>
+                <div class="two-column"><form id="parent-message-form" class="panel form-panel"><label for="message-child">Student<select id="message-child"></select></label><label for="message-teacher">Teacher<select id="message-teacher"></select></label><label for="message-subject">Subject<input id="message-subject" required></label><label for="message-text">Message<textarea id="message-text" rows="4" required></textarea></label><button class="primary-button" type="submit">Start conversation</button><p id="parent-message-status" class="form-message" aria-live="polite"></p></form><div class="panel"><div class="panel-heading"><h3>Conversation history</h3></div><div id="parent-message-list" class="account-list"></div></div></div>
+                <div id="active-message-panel" class="panel hidden" style="margin-top:20px;"><div class="panel-heading"><h3 id="active-message-title">Conversation</h3><div class="account-row-actions"><span id="active-message-status" class="status info">Open</span><button id="active-message-toggle-status" class="light-button small" type="button">Resolve</button><button class="light-button small" type="button" onclick="closeMessageThread()">Close</button></div></div><div id="active-message-thread" class="message-thread"></div><form id="message-reply-form" class="chat-form"><label class="sr-only" for="message-reply-text">Reply</label><input id="message-reply-text" required placeholder="Write a reply..."><button class="primary-button" type="submit">Reply</button></form></div>
+            </section>
+
+            <section id="page-complaints" class="page">
+                <div class="page-intro"><p class="eyebrow">FAMILY SUPPORT</p><h1>Complaints</h1><p>Track concerns separately from Parent Messages and meeting requests.</p></div>
+                <div class="two-column"><form id="complaint-form" class="panel form-panel"><label for="complaint-child">Child<select id="complaint-child"></select></label><label for="complaint-category">Category<select id="complaint-category"><option>Academic</option><option>Teacher</option><option>Transport</option><option>Fee</option><option>Behaviour</option><option>General</option></select></label><label for="complaint-priority">Priority<select id="complaint-priority"><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></label><label for="complaint-description">Description<textarea id="complaint-description" rows="4" required></textarea></label><button class="primary-button" type="submit">Raise complaint</button><p id="complaint-message" class="form-message" aria-live="polite"></p></form><div class="panel"><div class="panel-heading"><h3>Complaint list</h3><select id="complaint-status-filter" class="compact-select" onchange="renderComplaints()"><option value="all">All statuses</option><option>Open</option><option>Assigned</option><option>In Progress</option><option>Resolved</option><option>Closed</option><option>Reopened</option></select></div><div id="complaint-list" class="account-list"></div></div></div>
+                <div id="complaint-thread-panel" class="panel hidden" style="margin-top:20px;"><div class="panel-heading"><h3 id="complaint-thread-title">Complaint</h3><button class="light-button small" type="button" onclick="closeComplaintThread()">Close</button></div><div id="complaint-thread-content"></div><form id="complaint-reply-form" class="chat-form"><input id="complaint-reply-text" required placeholder="Reply to complaint..."><button class="primary-button" type="submit">Reply</button></form></div>
+            </section>
+
+            <!-- School Settings -->
+            <section id="page-settings" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">SCHOOL ADMINISTRATION</p>
+                    <h1>School settings</h1>
+                    <p>Configure the school branding, principal details, contact info, and theme color.</p>
+                </div>
+                <form id="settings-form" class="panel form-panel settings-form">
+                    <div class="form-grid">
+                        <label for="setting-name">School name
+                            <input id="setting-name" required>
+                        </label>
+                        <label for="setting-initials">Logo initials (Max 3 letters)
+                            <input id="setting-initials" maxlength="3" required>
+                        </label>
+                        <label for="setting-tagline">Tagline
+                            <input id="setting-tagline" required>
+                        </label>
+                        <label for="setting-principal">Principal name
+                            <input id="setting-principal" required>
+                        </label>
+                        <label for="setting-phone">Phone
+                            <input id="setting-phone" required>
+                        </label>
+                        <label for="setting-email">Email
+                            <input id="setting-email" type="email" required>
+                        </label>
+                    </div>
+                    <label for="setting-address">Address</label>
+                    <textarea id="setting-address" rows="2" required></textarea>
+                    <label for="setting-color">Primary theme color</label>
+                    <input id="setting-color" type="color" value="#087f73" style="height:44px;">
+                    <label for="setting-pass-percentage">Minimum pass percentage (school-configurable)
+                        <input id="setting-pass-percentage" type="number" min="1" max="100" step="1" required>
+                    </label>
+                    <label for="setting-hall-ticket-policy">Hall Ticket Eligibility Policy
+                        <select id="setting-hall-ticket-policy">
+                            <option value="Always Eligible">Always Eligible</option>
+                            <option value="Clear All Overdue Fees">Clear All Overdue Fees</option>
+                            <option value="Clear Examination Fee Only">Clear Examination Fee Only</option>
+                            <option value="Principal Approval Required">Principal Approval Required</option>
+                        </select>
+                    </label>
+                    <button class="primary-button" type="submit">Save settings</button>
+                    <p id="settings-message" class="form-message"></p>
+                </form>
+                <div class="panel danger-panel">
+                    <h3>Prototype data</h3>
+                    <p class="muted">Reset seeded demo records without changing the source code.</p>
+                    <button id="reset-demo-data" class="text-button danger-button" type="button">Reset demo data</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading"><h3>Demo QA</h3><button class="light-button small" type="button" onclick="renderDemoIntegrityChecks()">Run Integrity Checks</button></div>
+                    <div id="demo-qa-results" class="account-list"><p class="muted">Run checks to validate stored prototype relationships.</p></div>
+                </div>
+                <div class="panel"><div class="panel-heading"><h3>Transport fee configuration</h3><span class="status info">Route-based</span></div><form id="route-fee-form" class="form-grid"><label for="route-fee-route">Route<select id="route-fee-route"></select></label><label for="route-fee-village">Village<input id="route-fee-village" required></label><label for="route-fee-annual">Annual fee<input id="route-fee-annual" type="number" min="0" required></label><label for="route-fee-term-amounts">Term amounts, comma-separated<input id="route-fee-term-amounts" placeholder="2500,2500,2500,2500" required></label><button class="primary-button" type="submit">Save route fee</button></form><div id="route-fee-list" class="account-list"></div></div>
+            </section>
+
+            <!-- ==================== TEACHER PAGES ==================== -->
+            <!-- Teacher Dashboard -->
+            <section id="page-teacher" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FACULTY PORTAL</p>
+                    <h1 id="teacher-dashboard-title">Teacher dashboard</h1>
+                    <p id="teacher-dashboard-subtitle">Plan lessons, take attendance, assess marks, and communicate with parents.</p>
+                </div>
+                <div class="stats">
+                    <div class="stat-card"><span>Assigned classes</span><strong id="teacher-assigned-classes">0</strong><small>Sections</small></div>
+                    <div class="stat-card"><span>Total students</span><strong id="teacher-total-students">0</strong><small>Under guidance</small></div>
+                    <div class="stat-card"><span>Today's attendance</span><strong id="teacher-attendance-rate">0%</strong><small id="teacher-attendance-count">0 day-equivalents attended today</small></div>
+                    <div class="stat-card"><span>Homework assigned</span><strong id="teacher-homework-count">0</strong><small id="teacher-homework-pending-reviews">0 reviews pending</small></div>
+                </div>
+                <div class="two-column">
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Quick actions</h3>
+                            <span class="status info">Faculty tools</span>
+                        </div>
+                        <div class="action-list">
+                            <button id="teacher-take-attendance-action" type="button" onclick="showPage('attendance')">Take attendance <span>→</span></button>
+                            <button type="button" onclick="showPage('homework')">Assign homework <span>→</span></button>
+                            <button type="button" onclick="showPage('marks')">Enter marks <span>→</span></button>
+                            <button type="button" onclick="showPage('questions')">Create quiz <span>→</span></button>
+                            <button type="button" onclick="showPage('notifications')">Message parents <span>→</span></button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Class performance summary</h3>
+                            <span class="status published">Current academic year</span>
+                        </div>
+                        <div id="teacher-class-performance"></div>
+                    </div>
+                </div>
+                <div id="teacher-verification-panel" class="panel hidden"><div class="panel-heading"><h3>Pending Marks Verification</h3><span class="status pending">Class Teacher</span></div><div id="teacher-verification-list" class="account-list"></div></div>
+            </section>
+
+            <!-- Teacher My Students -->
+            <section id="page-teacher-students" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">MY CLASS</p>
+                    <h1>My students</h1>
+                    <p>Review students enrolled in your assigned classes and their attendance performance.</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3>Students roster</h3>
+                        <select id="teacher-students-class-filter" class="compact-select"></select>
+                    </div>
+                    <table id="teacher-students-table">
+                        <thead>
+                            <tr>
+                                <th>Roll</th>
+                                <th>Student Name</th>
+                                <th>Admission No</th>
+                                <th>Class & Section</th>
+                                <th>Parent Name</th>
+                                <th>Contact</th>
+                                <th>Attendance Rate</th>
+                                <th>Profile</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="teacher-student-profile-panel" class="panel hidden" style="margin-top:20px;">
+                    <div class="panel-heading">
+                        <h3 id="teacher-student-profile-title">Student Profile</h3>
+                        <button class="light-button small" type="button" onclick="closeTeacherStudentProfile()">Close profile</button>
+                    </div>
+                    <div id="teacher-student-profile-content"></div>
+                </div>
+            </section>
+
+            <!-- Teacher AI Lesson Planner -->
+            <section id="page-lesson-planner" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">AI TEACHING TOOLS</p>
+                    <h1>AI lesson planner</h1>
+                    <p>Generate comprehensive lesson plans tailored to your curriculum, then review and edit before teaching.</p>
+                </div>
+                <div class="two-column">
+                    <form id="lesson-planner-form" class="panel form-panel">
+                        <h3>Plan a lesson</h3>
+                        <label for="lesson-class">Target class</label>
+                        <select id="lesson-class"></select>
+                        <label for="lesson-subject">Subject</label>
+                        <select id="lesson-subject"></select>
+                        <label for="lesson-topic">Topic</label>
+                        <input id="lesson-topic" required placeholder="e.g. Newton's laws of motion">
+                        <label for="lesson-duration">Duration (Minutes)</label>
+                        <input id="lesson-duration" type="number" value="45" min="15" max="180">
+                        <label for="lesson-objective">Learning objective</label>
+                        <textarea id="lesson-objective" rows="2" placeholder="e.g. Students will be able to explain the relationship between force and acceleration."></textarea>
+                        <button class="primary-button" type="submit">Generate lesson plan draft</button>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Generated lesson plan draft</h3>
+                            <span class="status info">Editable</span>
+                        </div>
+                        <div id="lesson-output-container">
+                            <p class="muted">Fill in the lesson details and click generate.</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="ai-review-note">Demo AI tool. Generated content must be reviewed and approved by a teacher before classroom use.</p>
+            </section>
+
+            <!-- Teacher AI Question Paper Generator -->
+            <section id="page-question-paper" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">AI TEACHING TOOLS</p>
+                    <h1>AI question paper generator</h1>
+                    <p>Draft balanced exam questions across difficulty tiers with answer keys.</p>
+                </div>
+                <div class="two-column">
+                    <form id="question-paper-form" class="panel form-panel">
+                        <h3>Draft question paper</h3>
+                        <label for="paper-class">Target class</label>
+                        <select id="paper-class"></select>
+                        <label for="paper-subject">Subject</label>
+                        <select id="paper-subject"></select>
+                        <label for="paper-marks-total">Total marks</label>
+                        <input id="paper-marks-total" type="number" value="50" min="10" max="100">
+                        <label for="paper-level">Difficulty level</label>
+                        <select id="paper-level">
+                            <option value="Balanced">Balanced (40% Easy, 40% Medium, 20% Challenging)</option>
+                            <option value="Foundation">Foundation (Focus on fundamental concepts)</option>
+                            <option value="Advanced">Advanced (High-order thinking & problem solving)</option>
+                        </select>
+                        <label for="paper-num-questions">Number of questions</label>
+                        <input id="paper-num-questions" type="number" value="10" min="3" max="30">
+                        <button class="primary-button" type="submit">Draft question paper</button>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Draft question paper</h3>
+                            <span class="status info">Editable</span>
+                        </div>
+                        <div id="paper-output-container">
+                            <p class="muted">Select subject parameters to generate a draft paper.</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="ai-review-note">Demo AI tool. Generated content must be reviewed by a teacher before examination use.</p>
+            </section>
+
+            <!-- ==================== PARENT PAGES ==================== -->
+            <!-- Parent Dashboard -->
+            <section id="page-parent" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FAMILY PORTAL</p>
+                    <h1>Parent dashboard</h1>
+                    <p>Monitor your child's learning journey, attendance, school fee dues, and teacher communication.</p>
+                </div>
+
+                <!-- Multiple-Child Selector -->
+                <div id="parent-child-selector-container" class="child-selector-card">
+                    <span class="child-selector-label">Active Child Record:</span>
+                    <select id="parent-child-select" class="child-select" onchange="onParentChildChange(this.value)">
+                        <!-- Populated with linked children -->
+                    </select>
+                </div>
+
+                <div class="parent-grid">
+                    <div class="profile-card">
+                        <div id="parent-child-avatar" class="student-avatar">AS</div>
+                        <h3 id="parent-child-name">Student Name</h3>
+                        <p id="parent-child-class">Class · Roll</p>
+                        <span id="parent-child-today-status" class="status pending">Attendance not marked</span>
+                        <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:12px;">
+                            <small class="muted">Attendance Rate: </small><strong id="parent-child-attendance-pct">0%</strong>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>School notices & updates</h3>
+                            <button class="text-button" type="button" onclick="showPage('exams')">All notices</button>
+                        </div>
+                        <div id="parent-notices-preview" class="calendar-list"></div>
+                    </div>
+                </div>
+
+                <div class="parent-details">
+                    <div class="panel"><div class="panel-heading"><h3>Class Teacher</h3><span class="status info">Contact</span></div><p id="parent-class-teacher-name" class="muted">Not assigned</p><p id="parent-class-teacher-email" class="muted">Email unavailable</p></div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Fee balance</h3>
+                            <span id="parent-dashboard-fee-status" class="status pending">Pending</span>
+                        </div>
+                        <p id="parent-dashboard-fee-text" class="muted">Fee invoice details</p>
+                        <button class="primary-button small" type="button" onclick="showPage('fees')">View & pay fees</button>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Child homework</h3>
+                            <span id="parent-dashboard-hw-badge" class="status info">0 active</span>
+                        </div>
+                        <div id="parent-dashboard-hw-preview"></div>
+                        <button class="text-button" type="button" onclick="showPage('homework')">View homework →</button>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Latest report card</h3>
+                            <span id="parent-dashboard-report-badge" class="status paid">Available</span>
+                        </div>
+                        <p id="parent-dashboard-report-text" class="muted">Published school marks and evaluations</p>
+                        <button class="text-button" type="button" onclick="showPage('reports')">View report card →</button>
+                    </div>
+                </div>
+                <div class="panel parent-alerts-panel">
+                    <div class="panel-heading"><h3>What needs attention</h3><span class="status info">Selected child</span></div>
+                    <div id="parent-dashboard-alerts" class="alert-list"></div>
+                </div>
+            </section>
+
+            <!-- Parent Request Teacher Meeting -->
+            <section id="page-parent-meeting" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FAMILY & FACULTY</p>
+                    <h1>Request teacher meeting</h1>
+                    <p>Schedule an in-person or online conference with your child's teachers.</p>
+                </div>
+                <div class="two-column">
+                    <form id="parent-meeting-form" class="panel form-panel">
+                        <h3>Schedule a conference</h3>
+                        <label for="meeting-child-display">Student</label>
+                        <input id="meeting-child-display" readonly>
+                        <label for="meeting-teacher-select">Choose teacher</label>
+                        <select id="meeting-teacher-select" required></select>
+                        <div class="form-grid">
+                            <label for="meeting-date">Preferred date
+                                <input id="meeting-date" type="date" required>
+                            </label>
+                            <label for="meeting-time">Preferred time
+                                <select id="meeting-time">
+                                    <option>09:30 AM</option>
+                                    <option>11:30 AM</option>
+                                    <option>02:30 PM</option>
+                                    <option>04:00 PM</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label for="meeting-purpose">Meeting topic or reason</label>
+                        <textarea id="meeting-purpose" rows="3" required placeholder="Describe what you would like to discuss with the teacher..."></textarea>
+                        <button class="primary-button" type="submit">Submit meeting request</button>
+                        <p id="parent-meeting-message" class="form-message"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Meeting requests history</h3>
+                            <span class="status info">Status updates</span>
+                        </div>
+                        <div id="parent-meeting-history-list" class="calendar-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Parent Payment History -->
+            <section id="page-parent-payments" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FINANCE</p>
+                    <h1>Payment history</h1>
+                    <p>Track all school fees paid for your selected child and print prototype receipts.</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3 id="parent-payment-history-title">Receipts & payments</h3>
+                        <button class="light-button small" type="button" onclick="showPage('fees')">Pay pending fees</button>
+                    </div>
+                    <table id="parent-payments-history-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Payment Date</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ==================== STUDENT PAGES ==================== -->
+            <!-- Student Dashboard -->
+            <section id="page-student" class="page">
+                <div class="welcome-banner">
+                    <div>
+                        <p class="eyebrow" id="student-welcome-date">TODAY</p>
+                        <h1 id="student-welcome-name">Good morning.</h1>
+                        <p id="student-welcome-class">Class · Roll</p>
+                    </div>
+                    <button class="light-button" type="button" onclick="showPage('tutor')">Ask AI tutor</button>
+                </div>
+                <div class="stats">
+                    <div class="stat-card">
+                        <span>Attendance rate</span>
+                        <strong id="student-stat-attendance">0%</strong>
+                        <small id="student-stat-attended-days">0 days attended</small>
+                    </div>
+                    <div class="stat-card">
+                        <span>Today's homework</span>
+                        <strong id="student-stat-homework">0</strong>
+                        <small>Assignments active</small>
+                    </div>
+                    <div class="stat-card">
+                        <span>Study streak</span>
+                        <strong id="student-stat-streak">Not Available</strong>
+                        <small>Demo metric</small>
+                    </div>
+                    <div class="stat-card">
+                        <span>Class rank</span>
+                        <strong id="student-stat-rank">Not Available</strong>
+                        <small>Demo metric</small>
+                    </div>
+                </div>
+                <div class="two-column">
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Upcoming schedule today</h3>
+                            <button class="text-button" type="button" onclick="showPage('timetable')">Full timetable</button>
+                        </div>
+                        <p class="prototype-notice">Prototype timetable is available on the Timetable page.</p>
+                        <table>
+                            <thead>
+                                <tr><th>Time</th><th>Subject</th><th>Teacher</th><th>Room</th></tr>
+                            </thead>
+                            <tbody><tr><td colspan="4" class="muted">Open the Timetable page to view the prototype schedule.</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Latest published marks</h3>
+                            <button class="text-button" type="button" onclick="showPage('marks')">View all marks</button>
+                        </div>
+                        <div id="student-recent-marks-list" class="calendar-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Student AI Tutor -->
+            <section id="page-tutor" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">LEARNING SUPPORT</p>
+                    <h1>AI tutor</h1>
+                    <p>Ask questions, explore complex topics step-by-step, and practice with your personalized study buddy.</p>
+                </div>
+                <div class="tutor-layout">
+                    <div class="tutor-aside">
+                        <div class="tutor-orb">AI</div>
+                        <h3 id="tutor-greeting-title">Study buddy</h3>
+                        <p>Ask anything about your syllabus, homework concepts, formulas, or science experiments.</p>
+                        <label for="tutor-subject" style="color:#bad9d0; margin-top:16px;">Choose subject</label>
+                        <select id="tutor-subject" class="compact-select" style="background:#1d554d; color:#fff; border-color:#2a7066;" onchange="onTutorSubjectChange(this.value)">
+                            <option value="math">Mathematics</option>
+                            <option value="science">Science / Physics</option>
+                            <option value="english">English Language</option>
+                            <option value="cs">Computer Science / Java</option>
+                        </select>
+                        <div class="prompt-chips" id="tutor-prompt-chips"></div>
+                        <button id="btn-clear-chat" class="light-button small" type="button" style="margin-top:20px; width:100%;" onclick="clearTutorChat()">Clear chat history</button>
+                    </div>
+                    <div class="panel tutor-panel">
+                        <div id="chat-history" class="chat-history"></div>
+                        <form id="tutor-form" class="chat-form">
+                            <input id="question" type="text" placeholder="Ask your tutor a question..." required>
+                            <button class="primary-button" type="submit">Ask</button>
+                        </form>
+                    </div>
+                </div>
+                <p class="ai-review-note"><strong>Demo AI Tutor.</strong> Responses are simulated and are not generated by a live AI service.</p>
+            </section>
+
+            <!-- Digital Library -->
+            <section id="page-library" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">LEARNING RESOURCES</p>
+                    <h1>Digital library</h1>
+                    <p>Browse curriculum textbooks, reference guides, revision notes, and demo borrow materials.</p>
+                </div>
+                <div class="search-bar">
+                    <input id="library-search" placeholder="Search by title, author, or keyword..." oninput="filterLibrary()">
+                    <select id="library-subject-filter" class="compact-select" onchange="filterLibrary()">
+                        <option value="all">All subjects</option>
+                        <option value="mathematics">Mathematics</option>
+                        <option value="physics">Physics</option>
+                        <option value="english">English</option>
+                        <option value="fiction">Literature / Fiction</option>
+                    </select>
+                    <select id="library-type-filter" class="compact-select" onchange="filterLibrary()">
+                        <option value="all">All formats</option>
+                        <option value="book">Books</option>
+                        <option value="pdf">PDF E-Books</option>
+                        <option value="doc">Study Notes</option>
+                    </select>
+                    <span id="library-count">0 resources</span>
+                </div>
+                <div id="library-list" class="feature-grid"></div>
+
+                <div class="panel library-borrowed-list">
+                    <div class="panel-heading">
+                        <h3>My borrowed items</h3>
+                        <span class="status info">Demo checkouts</span>
+                    </div>
+                    <div id="borrowed-resources-list"></div>
+                </div>
+            </section>
+
+            <!-- ==================== SHARED ACADEMIC PAGES ==================== -->
+            <!-- Attendance -->
+            <section id="page-attendance" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">DAILY OPERATIONS</p>
+                    <h1 id="attendance-heading">Attendance</h1>
+                    <p id="attendance-description">Record and track daily classroom presence.</p>
+                </div>
+
+                <!-- Teacher Attendance Entry View -->
+                <div id="teacher-attendance-view" class="panel form-panel hidden">
+                    <div class="panel-heading">
+                        <h3 id="teacher-attendance-title">Take attendance</h3>
+                        <button id="btn-mark-all-morning" class="light-button small mark-all-button" type="button" onclick="markAllMorningPresent()">Mark all morning present</button><button id="btn-mark-all-afternoon" class="light-button small mark-all-button" type="button" onclick="markAllAfternoonPresent()">Mark all afternoon present</button><button id="btn-mark-all-present" class="light-button small mark-all-button" type="button" onclick="markAllPresent()">Mark all full day present</button>
+                    </div>
+                    <form id="teacher-attendance-form">
+                        <div class="form-grid">
+                            <label for="attendance-class-select">Select class section
+                                <select id="attendance-class-select" onchange="renderTeacherAttendanceRoster()"></select>
+                            </label>
+                            <label for="attendance-date-input">Attendance date
+                                <input id="attendance-date-input" type="date">
+                            </label>
+                        </div>
+                        <table class="attendance-capture-table">
+                            <thead>
+                                <tr>
+                                    <th>Roll No</th>
+                                    <th>Student</th>
+                                    <th>Morning</th><th>Afternoon</th><th>Daily Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacher-attendance-roster"></tbody>
+                        </table>
+                        <label for="attendance-correction-reason" style="margin-top:14px;">Correction reason (required when changing saved attendance)</label>
+                        <input id="attendance-correction-reason" placeholder="e.g. Bus delayed, medical leave, or status corrected">
+                        <button class="primary-button" type="submit" style="margin-top:16px;">Save attendance</button>
+                        <p id="attendance-message" class="form-message"></p>
+                    </form>
+                </div>
+
+                <!-- Admin Attendance Reports View -->
+                <div id="admin-attendance-view" class="panel hidden">
+                    <div class="panel-heading">
+                        <h3>School-wide attendance report</h3>
+                        <div style="display:flex; gap:10px;">
+                            <input id="admin-attendance-filter-date" type="date" class="compact-input" onchange="renderAdminAttendanceReport()">
+                        </div>
+                    </div>
+                    <div id="admin-attendance-report-container"></div>
+                </div>
+
+                <!-- Student Attendance View -->
+                <div id="student-attendance-view" class="hidden">
+                    <div class="stats">
+                        <div class="stat-card">
+                            <span>Attendance rate</span>
+                            <strong id="student-att-rate">0%</strong>
+                            <small id="student-att-trend">Academic term</small>
+                        </div>
+                        <div class="stat-card">
+                            <span>Full days</span>
+                            <strong id="student-att-days">0</strong>
+                            <small>Completed full attendance days</small>
+                        </div>
+                        <div class="stat-card">
+                            <span>Half days</span>
+                            <strong id="student-att-half-days">0</strong>
+                            <small>Session-based attendance</small>
+                        </div>
+                        <div class="stat-card">
+                            <span>Absent days</span>
+                            <strong id="student-att-absent">0</strong>
+                            <small>Daily attendance outcomes</small>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Attendance record history</h3>
+                        </div>
+                        <p id="student-attendance-empty" class="muted hidden">No attendance data available.</p>
+                        <table id="student-attendance-table">
+                            <thead>
+                                <tr><th>Date</th><th>Day</th><th>Morning</th><th>Afternoon</th><th>Daily Result</th><th>Class Teacher</th><th>Correction Note</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Parent Child Attendance View -->
+                <div id="parent-attendance-view" class="hidden">
+                    <div class="stats">
+                        <div class="stat-card">
+                            <span>Child attendance</span>
+                            <strong id="parent-att-rate">0%</strong>
+                            <small id="parent-att-name">Selected child</small>
+                        </div>
+                        <div class="stat-card">
+                            <span>Full days</span>
+                            <strong id="parent-att-days">0</strong>
+                            <small>Completed full attendance days</small>
+                        </div>
+                        <div class="stat-card">
+                            <span>Half days</span>
+                            <strong id="parent-att-half-days">0</strong>
+                            <small id="parent-att-leave-days">Leave days: 0</small>
+                        </div>
+                        <div class="stat-card">
+                            <span>Today's presence</span>
+                            <strong id="parent-att-today-text">—</strong>
+                            <small>Campus check-in</small>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3 id="parent-attendance-history-title">Child attendance log</h3>
+                        </div>
+                        <table id="parent-attendance-table">
+                            <thead>
+                                <tr><th>Date</th><th>Day</th><th>Morning</th><th>Afternoon</th><th>Daily Result</th><th>Class Teacher</th><th>Correction Note</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Homework -->
+            <section id="page-homework" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">LEARNING</p>
+                    <h1 id="homework-heading">Homework</h1>
+                    <p id="homework-description">Assign tasks, submit coursework, and exchange teacher feedback.</p>
+                </div>
+
+                <!-- Teacher Homework Management View -->
+                <div id="teacher-homework-view" class="two-column hidden">
+                    <form id="homework-form" class="panel form-panel">
+                        <h3 id="homework-form-title">Assign new homework</h3>
+                        <input id="homework-edit-id" type="hidden">
+                        <label for="homework-class">Target class</label>
+                        <select id="homework-class" required></select>
+                        <label for="homework-subject">Subject</label>
+                        <select id="homework-subject"></select>
+                        <label for="homework-title">Assignment title</label>
+                        <input id="homework-title" placeholder="e.g. Quadratic equations exercise 4.2" required>
+                        <label for="homework-instructions">Instructions</label>
+                        <textarea id="homework-instructions" rows="3" placeholder="Specify instructions, textbook questions, or guidelines..."></textarea>
+                        <div class="form-grid">
+                            <label for="homework-date">Due date
+                                <input id="homework-date" type="date" required>
+                            </label>
+                            <label for="homework-status-select">Status
+                                <select id="homework-status-select">
+                                    <option value="Published">Published</option>
+                                    <option value="Draft">Draft</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label for="homework-attachment-name">Attachment filename placeholder</label>
+                        <input id="homework-attachment-name" placeholder="e.g. exercise_worksheet_ch4.pdf">
+                        <button class="primary-button" type="submit">Save assignment</button>
+                        <p id="homework-message" class="form-message"></p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Manage assignments</h3>
+                            <select id="teacher-hw-class-filter" class="compact-select" onchange="renderTeacherHomeworkList()"></select>
+                        </div>
+                        <div id="teacher-homework-list" class="assignment-list"></div>
+                    </div>
+                </div>
+
+                <!-- Student Homework View -->
+                <div id="student-homework-view" class="panel hidden">
+                    <div class="panel-heading">
+                        <h3>My assigned homework</h3>
+                        <span class="status info" id="student-hw-class-badge">Class</span>
+                    </div>
+                    <p id="student-homework-message" class="form-message" aria-live="polite"></p>
+                    <div id="student-homework-list" class="assignment-list"></div>
+                </div>
+
+                <!-- Parent Homework View -->
+                <div id="parent-homework-view" class="panel hidden">
+                    <div class="panel-heading">
+                        <h3 id="parent-hw-child-title">Child homework</h3>
+                        <span class="status info" id="parent-hw-badge">Active assignments</span>
+                    </div>
+                    <div id="parent-homework-list" class="assignment-list"></div>
+                </div>
+
+                <!-- Admin Homework Overview -->
+                <div id="admin-homework-view" class="panel hidden">
+                    <div class="panel-heading">
+                        <h3>School-wide homework overview</h3>
+                        <select id="admin-hw-class-filter" class="compact-select" onchange="renderAdminHomeworkList()"></select>
+                    </div>
+                    <div id="admin-homework-list" class="assignment-list"></div>
+                </div>
+            </section>
+
+            <!-- Marks & Assessment -->
+            <section id="page-marks" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">ASSESSMENT</p>
+                    <h1 id="marks-heading">Marks entry & overview</h1>
+                    <p id="marks-description">Record grades, compute percentages accurately, and maintain academic assessment records.</p>
+                </div>
+
+                <!-- Teacher Marks Entry View -->
+                <div id="teacher-marks-view" class="panel hidden">
+                    <div class="panel-heading">
+                        <h3>Assessment roster</h3>
+                        <span class="status info">Formula: Percentage = (Score / Max) * 100</span>
+                    </div>
+                    <div class="form-grid three-col" style="margin-bottom:18px;">
+                        <label for="marks-class-select">Class section
+                            <select id="marks-class-select" onchange="loadTeacherMarksRoster()"></select>
+                        </label>
+                        <label for="marks-subject-select">Subject
+                            <select id="marks-subject-select" onchange="loadTeacherMarksRoster()"></select>
+                        </label>
+                        <label for="marks-exam-select">Exam / Assessment
+                            <select id="marks-exam-select" onchange="loadTeacherMarksRoster()">
+                                <option>Unit 1</option><option>Unit 2</option><option>Quarterly</option><option>Unit 3</option><option>Unit 4</option><option>Half Yearly</option><option>Pre Final</option><option>Final</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div style="max-width:240px; margin-bottom:18px;">
+                        <label for="marks-max-input">Maximum marks</label>
+                        <input id="marks-max-input" type="number" value="100" min="1" max="500" onchange="recalculateAllGrades()">
+                    </div>
+                    <table id="marks-table">
+                        <thead>
+                            <tr>
+                                <th>Roll</th>
+                                <th>Student Name</th>
+                                <th>Marks Obtained</th>
+                                <th>Percentage</th>
+                                <th>Calculated Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marks-roster-tbody"></tbody>
+                    </table>
+                    <div class="marks-actions">
+                        <button class="light-button small" type="button" onclick="saveMarks('Draft')">Save draft</button>
+                        <button class="light-button small" type="button" onclick="saveMarks('Submitted For Verification')">Submit for verification</button>
+                        <button class="primary-button small" type="button" onclick="publishVerifiedMarksFromRoster()">Publish verified marks</button>
+                    </div>
+                    <p id="marks-message" class="form-message"></p>
+                </div>
+
+                <!-- Admin Marks Overview -->
+                <div id="admin-marks-view" class="panel hidden">
+                    <div class="panel-heading">
+                        <h3>All marks records</h3>
+                        <div style="display:flex; gap:10px;">
+                            <select id="admin-marks-class-filter" class="compact-select" onchange="renderAdminMarksTable()"></select>
+                            <select id="admin-marks-exam-filter" class="compact-select" onchange="renderAdminMarksTable()">
+                                <option value="all">All Exams</option>
+                                <option>Unit 1</option><option>Unit 2</option><option>Quarterly</option><option>Unit 3</option><option>Unit 4</option><option>Half Yearly</option><option>Pre Final</option><option>Final</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table id="admin-marks-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Exam</th>
+                                <th>Subject</th>
+                                <th>Marks</th>
+                                <th>Percentage</th>
+                                <th>Grade</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Student Read-Only My Marks View -->
+                <div id="student-marks-view" class="panel hidden">
+                    <div class="form-grid"><label for="student-report-academic-year">Academic year<select id="student-report-academic-year"></select></label><label for="student-report-exam">Exam<select id="student-report-exam"><option>Unit 1</option><option>Unit 2</option><option>Quarterly</option><option>Unit 3</option><option>Unit 4</option><option>Half Yearly</option><option>Pre Final</option><option>Final</option><option>All Exams</option></select></label></div>
+                    <div class="panel-heading">
+                        <h3>My published marks</h3>
+                        <span class="status published">Published school scores</span>
+                    </div>
+                    <table id="student-marks-table">
+                        <thead>
+                            <tr>
+                                <th>Exam</th>
+                                <th>Subject</th>
+                                <th>Score</th>
+                                <th>Maximum</th>
+                                <th>Percentage</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Parent Read-Only Child Marks View -->
+                <div id="parent-marks-view" class="panel hidden">
+                    <div class="form-grid"><label for="parent-report-academic-year">Academic year<select id="parent-report-academic-year"></select></label><label for="parent-report-exam">Exam<select id="parent-report-exam"><option>Unit 1</option><option>Unit 2</option><option>Quarterly</option><option>Unit 3</option><option>Unit 4</option><option>Half Yearly</option><option>Pre Final</option><option>Final</option><option>All Exams</option></select></label></div>
+                    <div class="panel-heading">
+                        <h3 id="parent-marks-title">Child published marks</h3>
+                        <span class="status published">Published school scores</span>
+                    </div>
+                    <table id="parent-marks-table">
+                        <thead>
+                            <tr>
+                                <th>Exam</th>
+                                <th>Subject</th>
+                                <th>Score</th>
+                                <th>Maximum</th>
+                                <th>Percentage</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Report Cards -->
+            <section id="page-reports" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">ACADEMIC DOCUMENTS</p>
+                    <h1 id="reports-heading">Report cards</h1>
+                    <p id="reports-description">Prototype academic report cards built dynamically from published marks and attendance.</p>
+                </div>
+
+                <!-- Admin & Teacher Report Generator View -->
+                <div id="report-manager" class="two-column">
+                    <form id="report-form" class="panel form-panel">
+                        <h3>Report card generator</h3>
+                        <label for="report-student">Select student</label>
+                        <select id="report-student"></select>
+                        <label for="report-academic-year">Academic year</label>
+                        <select id="report-academic-year"></select>
+                        <label for="report-exam">Exam</label>
+                        <select id="report-exam">
+                            <option>Unit 1</option><option>Unit 2</option><option>Quarterly</option><option>Unit 3</option><option>Unit 4</option><option>Half Yearly</option><option>Pre Final</option><option>Final</option>
+                        </select>
+                        <label for="report-conduct">Conduct</label><select id="report-conduct"><option>Excellent</option><option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option></select>
+                        <label for="report-academic-remark">Academic Remark</label><textarea id="report-academic-remark" rows="2"></textarea>
+                        <label for="report-conduct-remark">Conduct Remark</label><textarea id="report-conduct-remark" rows="2"></textarea>
+                        <button class="primary-button" type="submit">Generate report card</button>
+                    </form>
+                    <div id="report-preview" class="report-preview">
+                        <div class="report-preview-empty">
+                            <span class="eyebrow">REPORT PREVIEW</span>
+                            <h2>Select a student to generate</h2>
+                            <p class="muted">The prototype report card with published marks, grades, and attendance summary will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student & Parent Dedicated Reader View -->
+                <div id="report-reader" class="printable-report hidden">
+                    <!-- Populated dynamically with prototype layout -->
+                </div>
+            </section>
+
+            <!-- Exams & Notices -->
+            <section id="page-exams" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">SCHOOL UPDATES</p>
+                    <h1>Exams & notices</h1>
+                    <p>Important dates, upcoming examination timetables, circulars, and school announcements.</p>
+                </div>
+                <div class="two-column">
+                    <div class="panel"><div class="panel-heading"><h3>Hall Ticket</h3><span class="status info">Prototype document</span></div><div id="hall-ticket-student-selector"><label for="hall-ticket-student">Student<select id="hall-ticket-student" onchange="refreshHallTicketEligibility()"></select></label></div><div id="hall-ticket-student-details" class="report-meta-grid"></div><label for="hall-ticket-exam">Exam<select id="hall-ticket-exam" onchange="refreshHallTicketEligibility()"><option>Quarterly</option><option>Half Yearly</option><option>Pre Final</option><option>Final</option></select></label><div id="hall-ticket-eligibility" class="form-message" aria-live="polite"></div><div id="hall-ticket-admin-controls" class="account-row-actions hidden"><button type="button" class="light-button small" onclick="setHallTicketRelease(true)">Release Hall Ticket</button><button type="button" class="light-button small" onclick="setHallTicketRelease(false)">Hold Hall Ticket</button><button type="button" class="light-button small" onclick="setHallTicketApproval(true)">Approve for Exam</button><button type="button" class="light-button small" onclick="setHallTicketApproval(false)">Revoke Approval</button></div><div class="account-row-actions"><button id="hall-ticket-generate" class="primary-button small" type="button" onclick="generateHallTicket()">Download Hall Ticket</button><button id="hall-ticket-go-fees" class="light-button small hidden" type="button" onclick="showPage('fees')">Go To Fees</button></div><p id="hall-ticket-message" class="form-message" aria-live="polite"></p></div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Upcoming examinations</h3>
+                            <span class="status pending">Prototype Data</span>
+                        </div>
+                        <p class="prototype-notice">These examination entries are for demonstration only.</p>
+                        <div class="calendar-list">
+                            <div><b>Maths · Unit 2</b><span>21 October 2026 · Room 204 · 09:30 AM</span></div>
+                            <div><b>Science · Practical Assessment</b><span>24 October 2026 · Science Lab · 10:00 AM</span></div>
+                            <div><b>English · Literature Comprehension</b><span>26 October 2026 · Room 108 · 09:30 AM</span></div>
+                            <div><b>Half Yearly Examinations</b><span>10-18 December 2026 · Main Examination Block</span></div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>School notices & circulars</h3>
+                            <span class="status info">Published</span>
+                        </div>
+                        <div id="exams-notices-list" class="calendar-list">
+                            <div><b>Annual sports day</b><span>Permission forms due Friday. Athletics heats commence Monday.</span></div>
+                            <div><b>Parent-teacher conferences</b><span>18 October · 10:30 AM to 01:30 PM. Book time slot in portal.</span></div>
+                            <div><b>School holiday</b><span>27 October · Diwali break. Campus reopens on 29 October.</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fees & Payments -->
+            <section id="page-fees" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">FINANCE</p>
+                    <h1>Fees & payments</h1>
+                    <p id="fees-description">Manage school tuition invoices, process payments, and review balances.</p>
+                </div>
+
+                <!-- Admin Fees View -->
+                <div id="admin-fees-view" class="hidden">
+                    <div class="stats">
+                        <div class="stat-card"><span>Total fee billed</span><strong id="admin-fee-stat-total">₹0</strong><small>Term invoices</small></div>
+                        <div class="stat-card"><span>Fees collected</span><strong id="admin-fee-stat-collected">₹0</strong><small>Recorded transactions</small></div>
+                        <div class="stat-card"><span>Outstanding dues</span><strong id="admin-fee-stat-pending">₹0</strong><small>Pending balance</small></div>
+                        <div class="stat-card"><span>Collection rate</span><strong id="admin-fee-stat-rate">0%</strong><small>Completion</small></div>
+                    </div>
+
+                    <form id="fee-structure-form" class="panel form-panel" style="margin-bottom:24px;">
+                        <div class="panel-heading">
+                            <h3>Create fee invoice</h3>
+                            <span class="status info">Billing administration</span>
+                        </div>
+                        <div class="form-grid">
+                            <label for="fee-category">Fee category
+                                <select id="fee-category" name="category"></select>
+                            </label>
+                            <label for="fee-term">Payment plan
+                                <select id="fee-term"><option>Full-Year Payment</option><option>Term 1</option><option>Term 2</option><option>Term 3</option><option>Term 4</option><option>Custom Settlement</option></select>
+                            </label>
+                            <label for="fee-amount">Amount (₹)
+                                <input id="fee-amount" name="amount" type="number" min="1" required placeholder="12500">
+                            </label>
+                            <label for="fee-due-date">Due date
+                                <input id="fee-due-date" name="dueDate" type="date" required>
+                            </label>
+                            <label for="fee-assignment-type">Assign to
+                                <select id="fee-assignment-type" onchange="toggleFeeAssignmentTarget(this.value)">
+                                    <option value="class">Entire Class Section</option>
+                                    <option value="student">Individual Student</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div id="fee-target-class-container">
+                            <label for="fee-class-select">Target class</label>
+                            <select id="fee-class-select" name="className"></select>
+                        </div>
+                        <div id="fee-target-student-container" class="hidden">
+                            <label for="fee-student-select">Target student</label>
+                            <select id="fee-student-select" name="studentId"></select>
+                        </div>
+                        <button class="primary-button small" type="submit" style="margin-top:16px;">Create invoices</button>
+                        <p id="fee-create-message" class="form-message"></p>
+                    </form>
+
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Fee ledger</h3>
+                            <input id="admin-fees-search" class="compact-input" placeholder="Search student or invoice..." oninput="renderAdminFeeLedger()">
+                        </div>
+                        <table id="fees-table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Invoice ID</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fees-table-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Parent Fees View -->
+                <div id="parent-fees-view" class="hidden">
+                    <div class="fee-summary">
+                        <div>
+                            <span class="eyebrow">LINKED STUDENT FEE SUMMARY</span>
+                            <h2 id="parent-fee-child">Student Name</h2>
+                            <p id="parent-fee-class" class="muted">Class · Term 2</p>
+                        </div>
+                        <div>
+                            <span class="muted">Total amount due</span>
+                            <strong id="parent-fee-balance">₹0</strong>
+                        </div>
+                    </div>
+                    <div class="two-column fee-parent-layout">
+                        <div class="panel">
+                            <div class="panel-heading">
+                                <h3>Invoices & payment records</h3>
+                                <span id="parent-fee-status-badge" class="status pending">Status</span>
+                            </div>
+                            <table id="parent-fee-history">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice ID</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <form id="parent-payment-form" class="panel form-panel">
+                            <h3>Pay outstanding invoice</h3>
+                            <p class="prototype-notice">Demo payment only. No real transaction will occur.</p>
+                            <label for="parent-pay-invoice-select">Select invoices to settle</label>
+                            <select id="parent-pay-invoice-select" multiple size="5"></select>
+                            <p id="parent-settlement-total" class="muted">Selected total: ₹0</p>
+                            <label for="payment-method">Payment method</label>
+                            <select id="payment-method">
+                                <option value="UPI">UPI (Google Pay / PhonePe / Paytm)</option>
+                                <option value="Card">Credit or Debit Card</option>
+                                <option value="NetBanking">Net Banking</option>
+                            </select>
+                            <label for="payment-reference">Transaction reference (Optional)</label>
+                            <input id="payment-reference" placeholder="e.g. UPI-987234123">
+                            <button id="parent-pay-button" class="primary-button" type="submit">Complete payment</button>
+                            <p id="parent-payment-message" class="form-message"></p>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notifications (formerly WhatsApp) -->
+            <section id="page-notifications" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">COMMUNICATION</p>
+                    <h1>Notifications</h1>
+                    <p>Deliver timely academic, attendance, emergency, and fee updates to families and faculty.</p>
+                </div>
+                <div class="two-column">
+                    <form id="notification-form" class="panel form-panel">
+                        <h3 id="notification-form-title">Send notification</h3>
+                        <label for="notification-type">Notice type</label>
+                        <select id="notification-type"></select>
+                        <label for="notification-audience">Target audience</label>
+                        <select id="notification-audience" onchange="toggleNotificationAudience(this.value)">
+                            <option value="All">All School Families & Staff</option>
+                            <option value="Parents">All Parents</option>
+                            <option value="Class">Specific Class</option>
+                            <option value="Student">Specific Student / Parent</option>
+                            <option value="Teachers">Faculty / Teachers Only</option>
+                        </select>
+                        <div id="notification-class-target" class="hidden">
+                            <label for="notification-class-select">Select class</label>
+                            <select id="notification-class-select"></select>
+                        </div>
+                        <div id="notification-student-target" class="hidden">
+                            <label for="notification-student-select">Select student</label>
+                            <select id="notification-student-select"></select>
+                        </div>
+                        <label for="notification-title-input">Notice title</label>
+                        <input id="notification-title-input" required placeholder="e.g. Unit Test 2 timetable released">
+                        <label for="notification-message">Message text</label>
+                        <textarea id="notification-message" rows="4" placeholder="Type your message..." required></textarea>
+                        <button class="primary-button" type="submit">Broadcast notification</button>
+                        <p id="notification-status" class="form-message"></p>
+                        <p class="prototype-notice">Demo notification saved. WhatsApp delivery is not connected.</p>
+                    </form>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Notice feed</h3>
+                            <div class="notification-filters"><select id="notification-type-filter" class="compact-select" aria-label="Filter notifications by type" onchange="renderNotificationsList()"><option value="all">All types</option></select><select id="notification-read-filter" class="compact-select" aria-label="Filter notifications by read status" onchange="renderNotificationsList()"><option value="all">All statuses</option><option value="unread">Unread</option><option value="read">Read</option></select></div>
+                        </div>
+                        <div id="notifications-history-list" class="notification-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quizzes & Questions -->
+            <section id="page-questions" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">PRACTICE & ASSESSMENT</p>
+                    <h1>Quiz & questions</h1>
+                    <p id="quiz-page-desc">Create multi-question assessments or practice classroom concepts.</p>
+                </div>
+
+                <!-- Teacher Quiz View -->
+                <div id="teacher-quiz-view" class="hidden">
+                    <div class="two-column">
+                        <form id="teacher-quiz-form" class="panel form-panel">
+                            <h3 id="teacher-quiz-form-title">Create new quiz</h3>
+                            <input id="teacher-quiz-edit-id" type="hidden">
+                            <label for="teacher-quiz-title">Quiz title</label>
+                            <input id="teacher-quiz-title" placeholder="e.g. Algebra & Polynomials Check-in" required>
+                            <div class="form-grid">
+                                <label for="teacher-quiz-subject">Subject
+                                    <select id="teacher-quiz-subject"></select>
+                                </label>
+                                <label for="teacher-quiz-class">Target class
+                                    <select id="teacher-quiz-class"></select>
+                                </label>
+                            </div>
+                            <div class="form-grid">
+                                <label for="teacher-quiz-due">Due date
+                                    <input id="teacher-quiz-due" type="date" required>
+                                </label>
+                                <label for="teacher-quiz-status">Publish status
+                                    <select id="teacher-quiz-status">
+                                        <option value="Published">Published</option>
+                                        <option value="Draft">Draft</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <label class="checkbox-label">
+                                <input id="teacher-quiz-retry" type="checkbox" checked> Allow students to retry this quiz
+                            </label>
+
+                            <hr style="border:0; border-top:1px solid var(--line); margin:18px 0;">
+                            <div id="quiz-questions-builder"></div>
+                            <div class="quiz-builder-toolbar">
+                                <button id="add-quiz-question" class="light-button" type="button">Add Question</button>
+                                <div class="quiz-builder-summary">
+                                    <span id="quiz-builder-question-count">1 Question</span>
+                                    <span id="quiz-builder-total-marks">Total Marks: 1</span>
+                                </div>
+                            </div>
+
+                            <button class="primary-button" type="submit">Save quiz</button>
+                            <p id="teacher-quiz-message" class="form-message"></p>
+                        </form>
+
+                        <div class="panel">
+                            <div class="panel-heading">
+                                <h3>Published & draft quizzes</h3>
+                                <span class="status info">Class assessments</span>
+                            </div>
+                            <div id="teacher-quiz-list" class="published-quiz-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Quiz View -->
+                <div id="student-quiz-view" class="hidden">
+                    <div id="published-quiz-list" class="published-quiz-list"></div>
+
+                    <!-- Interactive Practice Runner -->
+                    <div class="quiz-toolbar">
+                        <label for="quiz-subject">Practice topic:</label>
+                        <select id="quiz-subject">
+                            <option value="math">Mathematics Practice</option>
+                            <option value="science">Science Practice</option>
+                            <option value="english">English Practice</option>
+                        </select>
+                        <span id="quiz-progress">Question 1 of 3</span>
+                    </div>
+
+                    <div class="quiz-layout">
+                        <div class="panel quiz-card">
+                            <div class="question-number" id="question-number">01</div>
+                            <p class="eyebrow" id="question-subject">MATHEMATICS</p>
+                            <h2 id="question-text">Question text</h2>
+                            <div id="answer-options" class="answer-options"></div>
+                            <p id="quiz-feedback" class="quiz-feedback"></p>
+                            <button id="next-question" class="primary-button" type="button" disabled>Check answer</button>
+                        </div>
+                        <div class="quiz-side">
+                            <div class="score-circle">
+                                <strong id="quiz-score">0 / 0</strong>
+                                <span>marks</span>
+                            </div>
+                            <h3>Keep practicing</h3>
+                            <p>Read each problem carefully and verify your logic before submitting.</p>
+                            <button class="light-button" type="button" onclick="showPage('tutor')">Ask AI tutor</button>
+                        </div>
+                    </div>
+                    <div id="quiz-review-container" class="panel hidden"></div>
+                </div>
+            </section>
+
+            <!-- Timetable -->
+            <section id="page-timetable" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">ACADEMIC SCHEDULE</p>
+                    <h1>Timetable</h1>
+                    <p id="timetable-description">Know period timings, classroom locations, and weekly class routines.</p>
+                </div>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h3 id="timetable-heading">Class schedule · This week</h3>
+                        <span class="status info">Prototype Schedule</span>
+                    </div>
+                    <p class="prototype-notice">This timetable is demo data and is not yet linked to school scheduling records.</p>
+                    <table id="timetable-table">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Monday</th>
+                                <th>Tuesday</th>
+                                <th>Wednesday</th>
+                                <th>Thursday</th>
+                                <th>Friday</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>09:00 - 09:45</td><td>Mathematics</td><td>Physics</td><td>English</td><td>Mathematics</td><td>Chemistry</td></tr>
+                            <tr><td>10:00 - 10:45</td><td>Biology</td><td>English</td><td>Mathematics</td><td>Physics</td><td>Computer Science</td></tr>
+                            <tr><td>11:15 - 12:00</td><td>Physics Lab</td><td>Chemistry</td><td>Library</td><td>Biology</td><td>English</td></tr>
+                            <tr><td>02:00 - 02:45</td><td>English</td><td>Mathematics</td><td>Physical Education</td><td>Computer Science</td><td>Revision</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Study Materials -->
+            <section id="page-materials" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">LEARNING RESOURCES</p>
+                    <h1>Study materials</h1>
+                    <p>School-approved revision notes, reference handouts, and chapter guides.</p>
+                </div>
+                <div class="feature-grid">
+                    <div class="material-card">
+                        <span class="resource-icon">PDF</span>
+                        <h3>Quadratic equations</h3>
+                        <p>Mathematics · Chapter 04 revision formulas & solutions</p>
+                        <button class="text-button" type="button" onclick="openResource('Quadratic equations')">Open resource →</button>
+                    </div>
+                    <div class="material-card">
+                        <span class="resource-icon">PDF</span>
+                        <h3>Light and reflection</h3>
+                        <p>Physics · Chapter 07 ray diagrams & formula sheet</p>
+                        <button class="text-button" type="button" onclick="openResource('Light and reflection')">Open resource →</button>
+                    </div>
+                    <div class="material-card">
+                        <span class="resource-icon">DOC</span>
+                        <h3>Grammar essentials</h3>
+                        <p>English · Active/passive voice & tenses quick guide</p>
+                        <button class="text-button" type="button" onclick="openResource('Grammar essentials')">Open resource →</button>
+                    </div>
+                    <div class="material-card">
+                        <span class="resource-icon">PDF</span>
+                        <h3>Cell structure & functions</h3>
+                        <p>Biology · Chapter 02 labeled diagrams and summary</p>
+                        <button class="text-button" type="button" onclick="openResource('Cell structure & functions')">Open resource →</button>
+                    </div>
+                </div>
+                <p id="resource-message" class="form-message" style="margin-top:16px;"></p>
+            </section>
+
+            <!-- Transport -->
+            <section id="page-transport" class="page">
+                <div class="page-intro">
+                    <p class="eyebrow">SAFE JOURNEY</p>
+                    <h1>Transport information</h1>
+                    <p id="transport-subtitle">Assigned school bus route, driver details, and pickup/drop timings for the selected student.</p>
+                </div>
+                <div class="two-column">
+                    <div class="panel route-card">
+                        <span class="route-number" id="transport-route-num">R-12</span>
+                        <h2 id="transport-route-name">Route Name</h2>
+                        <p class="muted" id="transport-pickup-time">Morning pickup: 07:35 AM</p>
+                        <div id="transport-stops-list"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3>Vehicle & contact details</h3>
+                            <span class="status present" id="transport-status">Active route</span>
+                        </div>
+                        <p><b>Vehicle number</b><br><span id="transport-vehicle" class="muted">TS 28 AB 1456</span></p>
+                        <p style="margin-top:14px;"><b>Driver name</b><br><span id="transport-driver" class="muted">Ramesh Kumar</span></p>
+                        <p style="margin-top:14px;"><b>Driver contact</b><br><span id="transport-driver-contact" class="muted">+91 91234 56789</span></p>
+                        <p style="margin-top:14px;"><b>School transport coordinator</b><br><span id="transport-coordinator" class="muted">Mrs. Lakshmi · Ext 104</span></p>
+                        <div class="transport-notice">
+                            <p class="muted">Live GPS tracking is not connected in this prototype.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Internal Generic Overview (Preserved internally as required by rule, not displayed in sidebar) -->
+            <section id="page-dashboard" class="page">
+                <div class="welcome-banner">
+                    <div>
+                        <p class="eyebrow">FUTURESCHOOL</p>
+                        <h1>Overview</h1>
+                        <p>System overview workspace.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <div id="app-toast" class="app-toast" role="status" aria-live="polite"></div>
+    <div id="help-popover" class="help-popover hidden" role="dialog" aria-labelledby="help-popover-title"><div class="panel-heading"><h3 id="help-popover-title">Help</h3><button class="text-button" type="button" onclick="closeHelp()">Close</button></div><div id="help-popover-content"></div></div>
+</body>
+</html>
