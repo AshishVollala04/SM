@@ -1,0 +1,1407 @@
+Act as a Senior Software Architect, Senior Product Architect, Senior React Engineer, Senior UI/UX Engineer, Senior TypeScript Developer, and Senior Security Engineer.
+
+I am building a real-world School Management SaaS platform called:
+
+FUTURESCHOOL
+
+This is intended to become a commercial multi-school product, not just a college/demo project.
+
+Do not immediately generate the entire application.
+
+First understand the product architecture and requirements below.
+
+==========================================================
+1. PRODUCT VISION
+==========================================================
+
+FutureSchool is a digital operating platform for schools.
+
+The objective is to replace fragmented/manual school processes such as:
+
+- Student admissions
+- Attendance registers
+- Homework tracking
+- Exam schedules
+- Marks entry
+- Report Card preparation
+- Fee collection
+- Payment receipts
+- Hall Tickets
+- Parent communication
+- Teacher communication
+- Leave requests
+- Parent-Teacher meetings
+- Transport
+- Student pickup authorization
+- School notices
+- Complaints
+- Consent forms
+- School events
+- Staff operations
+- Academic planning
+- Administrative approvals
+- Audit records
+
+with one secure role-based platform.
+
+FutureSchool must feel like a serious modern SaaS application, not a colorful children's educational app.
+
+==========================================================
+2. USERS
+==========================================================
+
+FutureSchool has five main portal experiences:
+
+1. STUDENT
+2. PARENT
+3. TEACHER
+4. PRINCIPAL
+5. ADMIN
+
+These portals have different permissions and responsibilities.
+
+Never treat them as the same dashboard with renamed menus.
+
+==========================================================
+3. MULTI-SCHOOL ARCHITECTURE
+==========================================================
+
+FutureSchool is intended to support multiple schools.
+
+Conceptually:
+
+FutureSchool
+    |
+    +-- School A
+    |
+    +-- School B
+    |
+    +-- School C
+
+Every school has its own:
+
+- Students
+- Parents
+- Teachers
+- Principal
+- Admin users
+- Academic years
+- Classes
+- Sections
+- Subjects
+- Timetables
+- Exams
+- Fees
+- Payments
+- Transport
+- Policies
+- Branding
+- Integrations
+
+For the frontend prototype, use mock school context.
+
+Architect the frontend so tenant/school context can later come from a real backend.
+
+Never build UI architecture that assumes there will only ever be one school.
+
+==========================================================
+4. LOGIN MODEL
+==========================================================
+
+Login supports:
+
+Student
+Parent
+Teacher
+Principal
+Admin
+
+STUDENT AND PARENT:
+
+Student and Parent use:
+
+Same Student ID
++
+Same Password
++
+Same Registered Email
+
+The role selector determines the portal context.
+
+Example:
+
+Student ID:
+GVS-2027-0001
+
+Password:
+********
+
+Login As:
+Student
+
+opens:
+
+Student Portal
+
+The same credentials with:
+
+Login As:
+Parent
+
+open:
+
+Parent Portal
+
+Important:
+
+A Parent session is for exactly one Student ID.
+
+If a family has multiple children:
+
+Child A
+→ separate Student ID/login
+
+Child B
+→ separate Student ID/login
+
+There is NO sibling dashboard switcher.
+
+Family/sibling relationships may exist internally for policies such as sibling concession, but portal access remains isolated by Student ID.
+
+STAFF:
+
+Teacher:
+TCH0001
+
+Principal:
+PRN0001
+
+Admin:
+ADM0001
+
+Principal and Admin will eventually require MFA.
+
+For the prototype, authentication may be mocked.
+
+==========================================================
+5. STUDENT PORTAL
+==========================================================
+
+The Student Portal is the Student's personal academic workspace.
+
+Main areas:
+
+Dashboard
+Attendance
+Homework
+Quiz
+Study Materials
+Digital Library
+AI Tutor
+Timetable
+Exams
+Hall Ticket
+Marks
+Report Cards
+My Progress
+School Calendar
+Notifications
+Profile
+Account Security
+
+STUDENT DASHBOARD:
+
+Show:
+
+Today's Classes
+Next Class
+Attendance %
+Homework Due
+Upcoming Quiz
+Upcoming Exam
+Hall Ticket
+Important Notices
+
+ATTENDANCE:
+
+Student sees:
+
+Overall %
+Monthly trend
+Morning / Afternoon
+Full Day
+Half Day
+Absent
+Leave
+
+Student cannot edit attendance.
+
+HOMEWORK:
+
+Student sees:
+
+Subject
+Teacher
+Assignment
+Instructions
+Assigned Date
+Due Date
+Status
+
+Student can submit own Homework according to submission type.
+
+QUIZ:
+
+Student can attempt assigned quizzes.
+
+Support:
+
+MCQ
+Attempts
+Due date
+Score
+Review according to policy
+
+STUDY MATERIAL:
+
+Teacher-provided materials.
+
+AI TUTOR:
+
+Student AI Tutor is an academic learning assistant.
+
+It should primarily use approved school material.
+
+It must not:
+
+Change marks
+Change attendance
+Submit homework automatically
+Make administrative decisions
+
+RESULTS:
+
+Critical rule:
+
+Student sees NO formal marks before final publication.
+
+Workflow:
+
+Subject Teacher enters Marks
+        ↓
+Class Teacher reviews
+        ↓
+Class Teacher generates Report Cards
+        ↓
+Principal approves
+        ↓
+Class Teacher publishes
+        ↓
+Student can see Results
+
+Before that:
+
+"Results are not yet published."
+
+==========================================================
+6. PARENT PORTAL
+==========================================================
+
+Parent Portal is an action center for the specific Student ID used during login.
+
+Main modules:
+
+Dashboard
+Child Progress
+Attendance
+Homework
+Quiz
+Study Materials
+Timetable
+Exams
+Hall Ticket
+Fees
+Payments
+Receipts
+Refunds
+Transport
+Leave
+Teacher Communication
+Parent-Teacher Meetings
+Complaints
+Calendar
+Consent & Forms
+Events
+Pickup Authorization
+Early Pickup
+Notifications
+Reports
+Student Profile
+Security
+
+PARENT DASHBOARD:
+
+Prioritize actionable items:
+
+Fee outstanding
+Homework overdue
+Meeting tomorrow
+Consent pending
+Emergency notice
+Transport issue
+
+Then show:
+
+Child Today
+Academics
+School
+Quick Actions
+
+PARENT CANNOT:
+
+Submit Student Homework
+Edit Student Marks
+Edit Attendance
+See Unpublished Marks
+Use Student AI Tutor
+Access Sibling from Same Dashboard
+Track Student personal GPS
+
+==========================================================
+7. FEES AND PAYMENTS
+==========================================================
+
+Regular school fees use four instalments:
+
+1. School Opening
+2. Before SA-1
+3. Before SA-2
+4. Before Pre-Final
+
+Parent can pay:
+
+One term
+Two terms
+Three terms
+All four terms
+
+Partial payment is also allowed according to policy.
+
+Payment categories may include:
+
+School Fee
+Exam Fee
+Transport Fee
+Activity Fee
+Event Fee
+Other approved charges
+
+Transport fees are route-based and separate.
+
+Concessions may include:
+
+Sibling
+Scholarship
+Staff Child
+Financial Support
+Management
+Special Waiver
+Other
+
+Late fees are Admin-controlled according to policy.
+
+Online payment system must eventually use:
+
+Backend-calculated amount
+Payment provider order
+Hosted checkout
+Verified provider webhook
+Payment allocations
+Receipt
+
+Do not design frontend code that assumes the browser decides whether payment succeeded.
+
+For prototype:
+
+Simulate payment.
+
+Clearly mark it as prototype/mock.
+
+Never include or mock storage of:
+
+Card number
+CVV
+UPI PIN
+OTP
+Bank password
+
+PAYMENT HISTORY:
+
+Show:
+
+Payment
+Allocation
+Receipt
+Refund
+Credit
+Outstanding
+
+REFUND:
+
+Refund is separate from fee adjustment.
+
+Original financial records must remain preserved.
+
+==========================================================
+8. PARENT COMMUNICATION
+==========================================================
+
+Parent can message:
+
+Class Teacher
+or
+Assigned Subject Teachers
+
+Parent cannot search the entire Teacher directory.
+
+Communication categories:
+
+Academic Progress
+Homework
+Attendance
+Conduct
+Exam / Marks
+General School Question
+
+Formal issues stay separate:
+
+Fee issues
+→ Finance
+
+Complaints
+→ Complaint workflow
+
+Leave
+→ Leave workflow
+
+Transport change
+→ Transport workflow
+
+==========================================================
+9. PARENT-TEACHER MEETINGS
+==========================================================
+
+School/Teacher controls available slots.
+
+Parent:
+
+Selects Teacher
+Selects Purpose
+Selects Available Slot
+Books Meeting
+
+Prevent:
+
+Double Booking
+Past Booking
+Unavailable Teacher
+Unrelated Teacher
+Overlapping meetings
+
+Statuses:
+
+REQUESTED
+CONFIRMED
+RESCHEDULE_PROPOSED
+COMPLETED
+CANCELLED
+REJECTED
+
+After meeting:
+
+Parent-visible summary
++
+Restricted internal Teacher note
+
+Parent sees only the Parent-visible summary.
+
+==========================================================
+10. TEACHER PORTAL
+==========================================================
+
+Teacher Portal must separate:
+
+MY TEACHING
+
+from:
+
+MY CLASS TEACHER RESPONSIBILITY
+
+A Teacher can be:
+
+Subject Teacher only
+
+or:
+
+Subject Teacher + Class Teacher
+
+----------------------------------------------------------
+SUBJECT TEACHER
+----------------------------------------------------------
+
+Capabilities:
+
+Homework
+Homework Review
+Marks Entry
+Excel Marks Import
+Quiz
+Question Bank
+Study Materials
+Student Academic Doubts
+Class FAQ
+Lesson Planner
+Syllabus Progress
+Question Paper Generator
+Teacher AI Assistant
+
+FORMAL MARKS:
+
+Teacher enters marks only for:
+
+Assigned Academic Year
++
+Assigned Exam
++
+Assigned Class
++
+Assigned Subject
+
+Support:
+
+Draft
+Submitted
+Returned
+Corrected
+Resubmitted
+Accepted
+
+Exam absence must be:
+
+AB
+
+not:
+
+0
+
+0 means the Student attended the exam and scored zero.
+
+----------------------------------------------------------
+CLASS TEACHER
+----------------------------------------------------------
+
+Additional responsibilities:
+
+Morning Attendance
+Afternoon Attendance
+Leave Approval
+Parent Communication
+Parent Meetings
+Subject Marks Review
+Report Card Generation
+Hall Ticket Release
+Classroom Updates
+Promotion Recommendation
+Early Pickup Awareness
+
+ATTENDANCE:
+
+Class Teacher can:
+
+Mark All Present
+Change exceptions
+Confirm counts
+Save Morning
+Save Afternoon
+
+Approved Parent Leave appears as context but does not silently change Attendance.
+
+Corrections require reason and history.
+
+REPORT CARD:
+
+Subject Teachers
+        ↓
+Submit Marks
+        ↓
+Class Teacher accepts/returns
+        ↓
+Validation
+        ↓
+Generate Report Cards
+        ↓
+Conduct + Remarks
+        ↓
+Principal
+        ↓
+Approve / Return
+        ↓
+Class Teacher final-publishes
+
+Principal may approve 47 and return 3.
+
+Publication waits until all required Report Cards are approved.
+
+==========================================================
+11. REPORT CARD CORRECTIONS
+==========================================================
+
+Published academic results must never be silently overwritten.
+
+Example:
+
+Published Maths Mark:
+81
+
+Correct:
+91
+
+Workflow:
+
+Subject Teacher raises Correction
+        ↓
+Class Teacher verifies
+        ↓
+Principal approves
+        ↓
+Marks recalculated
+        ↓
+Report Card Version 2
+        ↓
+Class Teacher republishes
+
+Version 1 becomes:
+
+SUPERSEDED
+
+Version 2 becomes:
+
+CURRENT
+
+Historical record remains.
+
+==========================================================
+12. HALL TICKETS
+==========================================================
+
+Admin configures which fee categories are required for clearance.
+
+FutureSchool calculates:
+
+CLEARED
+or
+PENDING
+
+Class Teacher releases Hall Tickets.
+
+Payment itself does NOT automatically release Hall Ticket.
+
+Principal monitors school-wide Hall Ticket status.
+
+Principal can use a controlled emergency override only for:
+
+Eligible/Cleared Student
++
+Exceptional Situation
++
+Reason
++
+Audit
+
+==========================================================
+13. PRINCIPAL PORTAL
+==========================================================
+
+Principal Portal is an Executive School Leadership workspace.
+
+Separate:
+
+SCHOOL LEADERSHIP
+
+APPROVALS
+
+MY TEACHING
+
+MY TEACHING exists only when Principal actually has Subject Allocations.
+
+PRINCIPAL DASHBOARD:
+
+Action Required
+Today's School
+Academic Overview
+Financial Overview
+Parent & School
+My Teaching
+
+PRINCIPAL APPROVALS:
+
+Report Cards
+Teacher Leave
+Re-Exam
+Fee Concession
+Refund
+Fee Structure
+Published Mark Correction
+Promotion
+AI Material
+Academic Year Close
+Admission if policy requires
+Major Events
+Timetable
+Exam Schedule
+Teacher Allocations
+School Calendar changes
+
+PRINCIPAL SHOULD NOT:
+
+Enter other Teachers' marks
+Publish Report Cards directly
+Modify Admin configuration directly
+Rank Teachers
+Score Teacher performance
+View payment secrets
+
+==========================================================
+14. ADMIN PORTAL
+==========================================================
+
+Admin Portal is the school Operations and Administration Control Center.
+
+Admin configures, operates, prepares and executes.
+
+Principal governs and approves policy-sensitive decisions.
+
+Admin navigation is permission-aware.
+
+Potential Admin permission bundles:
+
+ADMISSIONS
+FINANCE
+ACADEMIC_OPERATIONS
+TRANSPORT
+SECURITY
+REPORTS
+
+ADMIN MODULES:
+
+Dashboard
+Admissions
+Student 360
+Staff
+Academic Year
+Classes
+Sections
+Subjects
+Teacher Allocations
+Timetable
+School Calendar
+Exam Configuration
+Exam Schedule
+Attendance Operations
+Finance
+Transport
+Complaints
+Events
+PTM
+Accounts
+Security
+Policies
+Integrations
+Reports
+Imports
+Audit
+Archive
+
+ADMIN DOES NOT BECOME AN ACADEMIC SUPER USER.
+
+Admin cannot:
+
+Edit Teacher Marks
+Approve Report Cards
+Publish Results
+Make Promotion Academic Decision
+Bypass Principal Approval
+
+==========================================================
+15. ADMIN GOVERNANCE MODEL
+==========================================================
+
+Use this pattern whenever governance is required:
+
+Admin prepares Draft
+        ↓
+FutureSchool validates
+        ↓
+Principal approves
+        ↓
+Approved-for-Execution
+        ↓
+FutureSchool performs fresh validation
+        ↓
+Admin publishes / activates / executes
+        ↓
+Audit history
+
+If the approved Draft changed after approval:
+
+Execution must be blocked.
+
+A new approval is required.
+
+==========================================================
+16. TRANSPORT
+==========================================================
+
+Commute modes:
+
+School Transport
+Walk
+Public Transport
+Bicycle
+
+School Transport supports:
+
+Routes
+Vehicles
+Pickup Points
+Capacity
+Student Assignment
+Transport Fees
+Transport Change Requests
+Transport Alerts
+
+Future enhancement:
+
+School Bus GPS
+
+Never:
+
+Student personal GPS
+
+==========================================================
+17. STUDENT SAFETY
+==========================================================
+
+FutureSchool supports:
+
+Approved Pickup Contacts
+Temporary Pickup Authorization
+Early Pickup
+School-Initiated Pickup
+School Incident
+Emergency Contact
+
+Workflow:
+
+Parent Authorization
+        ↓
+Class Teacher Awareness
+        ↓
+Authorized School Office/Admin Verification
+        ↓
+Student Release
+        ↓
+Historical Release Record
+
+Attendance should not be silently rewritten because of early release.
+
+==========================================================
+18. COMPLAINTS
+==========================================================
+
+Parent complaints are separate from normal Teacher messages.
+
+Categories:
+
+Academic
+Attendance
+Teacher Communication
+Transport
+Fees / Payment
+Facilities
+Student Safety
+Other
+
+Complaint flow:
+
+SUBMITTED
+ASSIGNED
+IN_PROGRESS
+RESOLVED
+CLOSED
+REOPENED
+
+Policy-based routing determines responsible owner.
+
+Sensitive Safety complaints go to restricted school workflows.
+
+Parent cannot see internal school notes.
+
+==========================================================
+19. EVENTS AND CONSENT
+==========================================================
+
+School Events can be:
+
+Free
+Payment Required
+Optional Contribution
+
+Event may require Parent consent.
+
+Parent consent remains attributable to the Parent.
+
+Admin cannot rewrite:
+
+Declined → Approved
+
+Paid events reuse the normal payment infrastructure.
+
+Cancellation/refund policy must be visible before Parent payment.
+
+==========================================================
+20. SECURITY ARCHITECTURE
+==========================================================
+
+FutureSchool is intended to become a multi-school SaaS application.
+
+The final production system must enforce security on the backend.
+
+Frontend visibility is NOT security.
+
+Conceptual request authorization:
+
+Authenticated User
+        ↓
+School
+        ↓
+Role
+        ↓
+Permission
+        ↓
+Relationship / Resource Scope
+        ↓
+Business Rule
+        ↓
+ALLOW / DENY
+
+Example:
+
+Maths Teacher
+Class 10-A
+
+Can enter:
+10-A Maths ✅
+
+Cannot enter:
+10-A Physics ❌
+9-B Maths ❌
+
+A School A user must never access School B records.
+
+==========================================================
+21. HISTORICAL DATA INTEGRITY
+==========================================================
+
+Do not design destructive business flows.
+
+Use:
+
+Versioning
+Adjustments
+Credits
+Refunds
+Corrections
+Audit Events
+Effective Dates
+
+instead of deleting history.
+
+Examples:
+
+Published Report Card
+→ Versioned Correction
+
+Payment
+→ Refund / Adjustment
+
+Staff Exit
+→ EXITED
+
+Student Transfer
+→ TRANSFERRED
+
+Academic Year
+→ CLOSED / READ ONLY
+
+Never build ordinary buttons such as:
+
+Delete Payment
+Delete Published Report Card
+Delete Audit History
+
+==========================================================
+22. DESIGN SYSTEM
+==========================================================
+
+FutureSchool should have a professional modern SaaS interface.
+
+Suggested visual direction:
+
+Primary:
+Deep Teal
+
+Accent:
+Warm Orange
+
+Background:
+Light neutral
+
+Cards:
+White
+
+Success:
+Green
+
+Warning:
+Amber
+
+Error:
+Red
+
+Information:
+Blue
+
+Use:
+
+Responsive sidebar
+Top navigation
+Cards
+Tables
+Filters
+Search
+Status badges
+Modals
+Drawers
+Tabs
+Charts where meaningful
+Good empty states
+Loading states
+Responsive mobile views
+
+Avoid:
+
+Childish design
+Excessive gradients
+Random colors
+Excessive animation
+Giant pages
+Inconsistent controls
+
+==========================================================
+23. FRONTEND TECHNOLOGY
+==========================================================
+
+Preferred:
+
+React
+TypeScript
+Vite
+Tailwind CSS
+React Router
+Lucide React
+Recharts
+
+If the current generated project already uses a compatible modern React architecture, preserve the good existing foundation instead of unnecessarily recreating everything.
+
+Do not add unnecessary frameworks.
+
+==========================================================
+24. FRONTEND ARCHITECTURE
+==========================================================
+
+Structure conceptually like:
+
+src/
+  app/
+
+  components/
+    layout/
+    common/
+    ui/
+
+  modules/
+    auth/
+    student/
+    parent/
+    teacher/
+    principal/
+    admin/
+
+  mock/
+
+  services/
+
+  types/
+
+  hooks/
+
+  utils/
+
+  styles/
+
+Do NOT put the entire application inside App.tsx.
+
+Each role module should own its screens.
+
+Shared design components should be reusable.
+
+==========================================================
+25. MOCK DATA ARCHITECTURE
+==========================================================
+
+For prototype stage:
+
+Use centralized fictional mock data/services.
+
+Do not scatter:
+
+"Aanya Sharma"
+"94%"
+"₹15,000"
+
+across random JSX files.
+
+Use models/services so later:
+
+Mock Service
+     ↓
+REST API
+
+can be swapped without redesigning the UI.
+
+==========================================================
+26. DEVELOPMENT ORDER
+==========================================================
+
+Build FutureSchool in this order:
+
+PHASE 0
+Frontend Foundation
+
+PHASE 1
+Authentication
+
+PHASE 2
+Student Portal
+
+PHASE 3
+Parent Portal
+
+PHASE 4
+Teacher Portal
+
+PHASE 5
+Principal Portal
+
+PHASE 6
+Admin Portal
+
+PHASE 7
+Cross-Role Workflow Integration & QA
+
+DO NOT BUILD EVERYTHING AT ONCE.
+
+==========================================================
+27. CROSS-ROLE WORKFLOWS
+==========================================================
+
+Eventually demonstrate these end-to-end mock flows:
+
+FLOW 1
+
+Parent Leave Request
+→ Teacher Approves
+→ Parent sees Approved
+→ Attendance sees Leave Context
+
+
+FLOW 2
+
+Subject Teacher Marks
+→ Class Teacher Review
+→ Report Cards
+→ Principal Approval
+→ Class Teacher Publication
+→ Student + Parent Results
+
+
+FLOW 3
+
+Parent Fee Payment
+→ Verification
+→ Receipt
+→ Fee Clearance
+→ Class Teacher Hall Ticket Release
+→ Student + Parent Hall Ticket
+
+
+FLOW 4
+
+Parent Transport Change
+→ Admin Validation
+→ Approval
+→ Assignment Change
+→ Financial Adjustment
+→ Parent Updated
+
+
+FLOW 5
+
+Parent Complaint
+→ Responsible Owner
+→ Escalation
+→ Principal
+→ Resolution
+→ Parent Confirmation
+
+
+FLOW 6
+
+Teacher Leave
+→ Principal Approval
+→ Admin Substitute
+→ Timetable Update
+
+
+FLOW 7
+
+Admin Draft
+→ Principal Approval
+→ Admin Execution
+→ Published Configuration
+
+==========================================================
+28. AI RULES
+==========================================================
+
+Student AI:
+Academic Tutor only.
+
+Teacher AI:
+Drafting academic learning content.
+
+Principal AI:
+Leadership summaries/navigation.
+
+Admin AI:
+Operational summaries/navigation.
+
+AI must NEVER independently:
+
+Change Marks
+Change Attendance
+Approve Report Cards
+Approve Refunds
+Approve Re-Exams
+Change Permissions
+Reset Credentials
+Process Payment
+Release Hall Ticket
+Close Academic Year
+Perform Student Exit
+Perform Staff Exit
+Make disciplinary decisions
+
+Human authority remains responsible.
+
+==========================================================
+29. IMPORTANT PRODUCT BOUNDARIES
+==========================================================
+
+DO NOT ADD:
+
+Teacher Performance Score
+Teacher Ranking
+Best/Worst Teacher
+Student Behavior Score
+Student Ranking
+Parent Ranking
+Admin Productivity Score
+
+Operational analytics are allowed.
+
+Human performance scoring is not part of FutureSchool V1.
+
+==========================================================
+30. YOUR FIRST TASK
+==========================================================
+
+Do NOT implement the whole specification yet.
+
+First inspect the existing project.
+
+Report:
+
+1. Current framework
+2. Current folder structure
+3. Current routes
+4. Existing dependencies
+5. Existing UI/design system
+6. Which FutureSchool roles/modules are already implemented
+7. Code-quality problems
+8. Architecture problems
+9. Reusable components already available
+10. What should be preserved
+11. What should be refactored
+12. Exact recommended folder architecture going forward
+
+Then begin ONLY:
+
+PHASE 0 — FRONTEND FOUNDATION
+
+Phase 0 should include:
+
+- Design system
+- Responsive AppShell
+- Sidebar
+- TopBar
+- Role-aware navigation
+- Routing foundation
+- Shared components
+- Centralized mock data foundation
+- Prototype Role Switcher
+- Five polished placeholder dashboards
+
+Do NOT implement real business modules yet.
+
+Before finishing:
+
+- Run the build
+- Fix TypeScript errors
+- Fix imports
+- Fix routing
+- Check responsiveness
+- Check reusable architecture
+
+At the end report:
+
+- Files created
+- Files changed
+- Architecture
+- Routes
+- Dependencies
+- Build result
+- Assumptions
+
+Stop after Phase 0.
