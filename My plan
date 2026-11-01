@@ -1,0 +1,1150 @@
+Act as my complete senior software engineering team for a product called FutureSchool.
+
+I am the product owner.
+
+I have the product idea and business requirements, but I do not know how to build the entire production application by myself.
+
+Your job is to act as:
+
+- Senior Software Architect
+- Senior Product Engineer
+- Senior React Developer
+- Senior Java / Spring Boot Developer
+- Database Architect
+- Security Architect
+- DevOps Engineer
+- QA Engineer
+- UI/UX Engineer
+
+IMPORTANT:
+
+Do not expect me to already know the correct technical architecture.
+
+Guide and build the application with me step by step.
+
+Do not build everything at once.
+
+For every phase:
+
+1. Explain what we are building.
+2. Explain why it is needed.
+3. Show the architecture.
+4. Create the required project structure.
+5. Implement the code.
+6. Run/build/test the implementation where tools allow.
+7. Identify errors.
+8. Fix those errors.
+9. Give me manual testing steps.
+10. Stop after that phase.
+
+I will then tell you to continue.
+
+=======================================================
+PRODUCT: FUTURESCHOOL
+=======================================================
+
+FutureSchool is a multi-school SaaS School Management Platform.
+
+The goal is to digitize school operations that are often handled manually.
+
+The system has five major user experiences:
+
+1. Student
+2. Parent
+3. Teacher
+4. Principal
+5. Admin
+
+Major capabilities include:
+
+- Admissions
+- Student management
+- Staff management
+- Attendance
+- Homework
+- Quiz
+- Study materials
+- Timetable
+- Exams
+- Marks
+- Report Cards
+- Hall Tickets
+- Fees
+- Online payments
+- Offline payments
+- Payment receipts
+- Refunds
+- Credits
+- Concessions
+- Transport
+- Parent communication
+- Teacher communication
+- Parent-Teacher meetings
+- Leave
+- Complaints
+- Notifications
+- Events
+- Parent consent
+- Student pickup authorization
+- Early pickup
+- School incidents
+- Academic calendar
+- Promotion
+- Student transfer/exit
+- Staff onboarding/exit
+- Audit history
+- Reports
+- AI features
+
+=======================================================
+PRODUCTION ARCHITECTURE TARGET
+=======================================================
+
+The target production architecture should be:
+
+Frontend:
+React
+TypeScript
+Vite
+Tailwind CSS
+React Router
+Recharts
+Lucide React
+
+Backend:
+Java 21
+Spring Boot
+Spring Security
+Spring Data JPA
+Bean Validation
+Flyway
+OpenAPI / Swagger
+
+Database:
+PostgreSQL
+
+Architecture:
+Modular Monolith initially
+
+Do NOT start with microservices.
+
+We may move selected components to separate services later only if there is a real scaling/business reason.
+
+=======================================================
+MULTI-SCHOOL ARCHITECTURE
+=======================================================
+
+FutureSchool will eventually support multiple schools.
+
+Conceptually:
+
+FutureSchool
+
+    School A
+        Students
+        Parents
+        Teachers
+        Principal
+        Admins
+        Fees
+        Academic Data
+
+    School B
+        Students
+        Parents
+        Teachers
+        Principal
+        Admins
+        Fees
+        Academic Data
+
+Each school's data must remain isolated.
+
+Every important business record should belong to a school/tenant.
+
+The backend must enforce school isolation.
+
+Frontend filtering is NOT security.
+
+A user from School A must never access School B data by changing a URL, Student ID, API request or browser state.
+
+=======================================================
+AUTHENTICATION MODEL
+=======================================================
+
+Student and Parent share:
+
+Student ID
+Password
+Registered Email
+
+Login screen allows:
+
+Login As:
+Student
+Parent
+
+Same credential + Student selection:
+→ Student Portal
+
+Same credential + Parent selection:
+→ Parent Portal
+
+A Parent login represents exactly one Student ID.
+
+There is no sibling switcher.
+
+A sibling uses another Student ID login.
+
+Staff accounts are individual:
+
+Teacher:
+TCHxxxx
+
+Principal:
+PRNxxxx
+
+Admin:
+ADMxxxx
+
+Principal and Admin require MFA in production.
+
+=======================================================
+AUTHORIZATION MODEL
+=======================================================
+
+Do not implement only simple role checks.
+
+FutureSchool authorization must conceptually use:
+
+Role
++
+Permission
++
+School/Tenant
++
+Relationship/Resource Scope
++
+Workflow State
+
+Example:
+
+Teacher
++
+Marks Entry
++
+Class 10-A
++
+Mathematics
+
+means:
+
+10-A Mathematics Marks
+ALLOWED
+
+10-A Physics Marks
+DENIED
+
+9-B Mathematics Marks
+DENIED
+
+Every backend endpoint must independently enforce authorization.
+
+Never trust:
+- frontend navigation
+- hidden buttons
+- route names
+- IDs supplied by browser
+
+=======================================================
+STUDENT PORTAL
+=======================================================
+
+Student functionality includes:
+
+Dashboard
+Attendance
+Homework
+Quiz
+Study Materials
+Digital Library
+AI Tutor
+Timetable
+Exams
+Hall Ticket
+Published Marks
+Published Report Cards
+My Progress
+Calendar
+Notifications
+Profile
+Security
+
+Students never see unpublished formal marks.
+
+Academic publication workflow:
+
+Subject Teacher
+→ enters Marks
+
+Class Teacher
+→ reviews
+
+Class Teacher
+→ generates Report Cards
+
+Principal
+→ approves
+
+Class Teacher
+→ publishes
+
+Student/Parent
+→ can finally view results
+
+=======================================================
+PARENT PORTAL
+=======================================================
+
+Parent functionality includes:
+
+Dashboard
+Child Progress
+Attendance
+Homework Tracking
+Quiz Visibility
+Study Materials
+Timetable
+Exams
+Hall Ticket
+Fees
+Payments
+Receipts
+Refunds
+Credits
+Transport
+Leave
+Teacher Messages
+Meetings
+Complaints
+Calendar
+Consent Forms
+Events
+Pickup Authorization
+Early Pickup
+Notifications
+Reports
+Student Profile
+Security
+
+Parent cannot:
+
+- Submit Student homework
+- Edit attendance
+- Edit marks
+- See unpublished marks
+- Use Student AI Tutor
+- View another Student
+- Track Student personal GPS
+
+=======================================================
+TEACHER PORTAL
+=======================================================
+
+Teacher Portal has two separate concepts:
+
+MY TEACHING
+
+and
+
+MY CLASS TEACHER RESPONSIBILITY
+
+Subject Teacher functionality:
+
+Homework
+Homework Review
+Marks
+Excel Marks Import
+Quiz
+Question Bank
+Study Materials
+Student Doubts
+Class FAQ
+Lesson Planner
+Syllabus Progress
+Question Paper Generator
+Teacher AI Assistant
+
+Class Teacher additionally handles:
+
+Morning Attendance
+Afternoon Attendance
+Leave Requests
+Parent Communication
+PTM
+Subject Marks Validation
+Report Card Preparation
+Hall Ticket Release
+Classroom Updates
+Promotion Recommendation
+Early Pickup Awareness
+
+=======================================================
+PRINCIPAL PORTAL
+=======================================================
+
+Principal is responsible for school leadership and approvals.
+
+Principal functionality includes:
+
+Executive Dashboard
+Action Center
+Report Card Approval
+Teacher Leave Approval
+Re-Exam Approval
+Promotion Approval
+Fee Concession Approval
+Refund Approval
+Fee Structure Approval
+Published Mark Correction Approval
+Student Attendance Monitoring
+Teacher Coverage
+Exam Control Center
+Hall Ticket Monitoring
+Academic Analytics
+Syllabus Progress
+Complaints
+Safety Incidents
+Emergency Notices
+Student Directory
+Teacher Directory
+Reports
+Audit / Governance
+Leadership AI
+
+If Principal teaches a subject:
+
+MY TEACHING
+
+should exist only for actual subject allocations.
+
+Principal leadership authority must not become unrestricted Teacher edit access.
+
+=======================================================
+ADMIN PORTAL
+=======================================================
+
+Admin is the School Operations and Administration layer.
+
+Admin functionality includes:
+
+Admissions
+Student 360
+Staff
+Academic Year
+Classes
+Sections
+Subjects
+Teacher Allocations
+Timetable
+School Calendar
+Exam Configuration
+Exam Schedule
+Attendance Operations
+Finance
+Transport
+Complaints
+Events
+PTM
+Accounts
+Security
+Policies
+Integrations
+Reports
+Imports
+Audit
+Archive
+
+Admin permissions should be granular.
+
+Examples:
+
+ADMISSIONS
+FINANCE
+ACADEMIC_OPERATIONS
+TRANSPORT
+SECURITY
+REPORTS
+
+Admin does NOT automatically have Principal authority.
+
+Admin cannot:
+
+- Edit Teacher marks
+- Approve Report Cards
+- Publish academic results
+- Decide Student promotion academically
+- Bypass Principal approval
+
+=======================================================
+PAYMENTS
+=======================================================
+
+Regular school fees use four instalments:
+
+1. School Opening
+2. Before SA-1
+3. Before SA-2
+4. Before Pre-Final
+
+Support:
+
+Partial payment
+Multi-term payment
+Full-year payment
+Transport fees
+Concessions
+Late fees
+Credits
+Refunds
+Events fees
+Offline payments
+
+Online payment flow must eventually be:
+
+Parent selects invoices
+→ Backend loads authoritative invoices
+→ Backend calculates amount
+→ Backend creates payment order
+→ Provider hosted checkout
+→ Provider/bank authentication
+→ Verified server-side callback/webhook
+→ Payment recorded
+→ Allocations recorded
+→ Receipt generated
+→ Reconciliation
+
+Never trust payment success only from the browser.
+
+Never store:
+
+Card Number
+CVV
+UPI PIN
+OTP
+Bank Password
+
+=======================================================
+HALL TICKET
+=======================================================
+
+Admin configures which fee categories are required.
+
+FutureSchool calculates:
+
+CLEARED
+or
+PENDING
+
+Class Teacher releases a Cleared Student's Hall Ticket.
+
+Payment does NOT automatically release it.
+
+Principal monitors and may perform a controlled exceptional override for an eligible Student.
+
+=======================================================
+HISTORICAL DATA
+=======================================================
+
+FutureSchool must preserve historical truth.
+
+Do not create normal destructive workflow buttons such as:
+
+Delete Payment
+Delete Published Report Card
+Delete Audit Record
+Delete Historical Attendance
+
+Use:
+
+Versioning
+Adjustments
+Credits
+Refunds
+Corrections
+Effective Dates
+Audit Events
+
+Examples:
+
+Published Report Card correction:
+Version 1 → SUPERSEDED
+Version 2 → CURRENT
+
+Student Transfer:
+ACTIVE → TRANSFERRED
+
+Staff Exit:
+ACTIVE → EXITED
+
+Academic Year:
+ACTIVE → CLOSED / READ ONLY
+
+=======================================================
+SECURITY REQUIREMENTS
+=======================================================
+
+Production security must include:
+
+HTTPS
+Secure password hashing
+MFA for privileged users
+Step-up verification
+Backend authorization
+Tenant isolation
+Object-level authorization
+Input validation
+Rate limiting
+Secure session/token handling
+Session revocation
+Secure password recovery
+Audit logs
+Secrets management
+Protected file downloads
+Sensitive export controls
+Payment webhook verification
+Idempotency
+Database transactions
+Encrypted backups
+Restore testing
+Monitoring
+Security alerts
+
+Never put secrets in frontend source code.
+
+Never assume hidden UI = security.
+
+=======================================================
+AUDIT
+=======================================================
+
+Sensitive actions must generate immutable audit records.
+
+Examples:
+
+Marks Correction
+Payment Adjustment
+Refund
+Teacher Allocation
+User Reset
+Permission Change
+Hall Ticket Override
+Sensitive Export
+Academic Year Close
+Student Exit
+Staff Exit
+
+Audit information should conceptually include:
+
+School
+Actor
+Action
+Entity
+Previous State
+New State
+Reason
+Approval Reference
+Policy Version
+Timestamp
+
+Normal users cannot delete audit history.
+
+=======================================================
+AI FEATURES
+=======================================================
+
+Student AI:
+Academic Tutor
+
+Teacher AI:
+Learning-content drafting assistant
+
+Principal AI:
+Leadership summarization/navigation
+
+Admin AI:
+Operations summarization/navigation
+
+AI may:
+
+Summarize
+Draft
+Explain
+Navigate
+
+AI must NOT independently:
+
+Change Marks
+Change Attendance
+Approve Report Cards
+Process Refund
+Change Permissions
+Reset Credentials
+Release Hall Tickets
+Close Academic Year
+Perform Student Exit
+Perform Staff Exit
+Make disciplinary decisions
+
+Humans retain authority.
+
+=======================================================
+PROJECT BUILD STRATEGY
+=======================================================
+
+I want you to help me build the entire application through controlled phases.
+
+Do not skip phases.
+
+=======================================================
+PHASE 1 — REQUIREMENTS / DOMAIN MODEL
+=======================================================
+
+Review the existing requirements.
+
+Create:
+
+- Product module map
+- Entity/domain map
+- Role map
+- Permission map
+- Workflow map
+
+Do not code business features yet.
+
+=======================================================
+PHASE 2 — FRONTEND FOUNDATION
+=======================================================
+
+Build:
+
+React + TypeScript + Vite project
+
+Design System
+AppShell
+Sidebar
+TopBar
+Routing
+Shared UI components
+Responsive layout
+Role navigation
+Central mock data architecture
+
+Create placeholder dashboards for:
+
+Student
+Parent
+Teacher
+Principal
+Admin
+
+=======================================================
+PHASE 3 — AUTHENTICATION FRONTEND
+=======================================================
+
+Build mock:
+
+Login
+Forgot Password
+MFA
+Session
+Role Guards
+Protected Routes
+
+Support the finalized Student/Parent shared credential model.
+
+=======================================================
+PHASE 4 — STUDENT PORTAL
+=======================================================
+
+Implement Student module completely.
+
+Test it.
+
+Stop before next role.
+
+=======================================================
+PHASE 5 — PARENT PORTAL
+=======================================================
+
+Implement Parent module completely.
+
+Test it.
+
+Stop before next role.
+
+=======================================================
+PHASE 6 — TEACHER PORTAL
+=======================================================
+
+Implement Subject Teacher and Class Teacher modules.
+
+Test all academic workflows.
+
+=======================================================
+PHASE 7 — PRINCIPAL PORTAL
+=======================================================
+
+Implement Executive Dashboard, approvals, analytics, governance and My Teaching.
+
+=======================================================
+PHASE 8 — ADMIN PORTAL
+=======================================================
+
+Implement School Operations modules.
+
+Use permission-aware navigation.
+
+=======================================================
+PHASE 9 — MOCK CROSS-ROLE INTEGRATION
+=======================================================
+
+Connect frontend workflows using centralized mock state.
+
+Demonstrate:
+
+Parent Leave
+→ Teacher Approval
+→ Parent Result
+
+Teacher Marks
+→ Class Teacher
+→ Principal
+→ Publication
+
+Parent Payment
+→ Receipt
+→ Hall Ticket Clearance
+→ Teacher Release
+
+Teacher Leave
+→ Principal
+→ Admin Substitution
+
+Admin Draft
+→ Principal Approval
+→ Admin Execution
+
+=======================================================
+PHASE 10 — BACKEND ARCHITECTURE
+=======================================================
+
+Before Spring Boot business coding, create these six artifacts:
+
+1. Security Architecture
+2. Database / Tenant Architecture
+3. Authorization Matrix
+4. API Contract
+5. Audit Model
+6. Threat Model
+
+Review them with me before coding.
+
+=======================================================
+PHASE 11 — BACKEND FOUNDATION
+=======================================================
+
+Create:
+
+Java 21
+Spring Boot
+PostgreSQL
+Flyway
+Spring Security
+OpenAPI
+Validation
+
+Start with:
+
+School
+User
+Credential
+Role
+Permission
+Academic Year
+Class
+Section
+Subject
+Student
+Staff
+Teacher Allocation
+
+Do NOT create every database table at once.
+
+=======================================================
+PHASE 12 — REAL AUTHENTICATION & AUTHORIZATION
+=======================================================
+
+Implement:
+
+Password hashing
+Sessions / JWT strategy
+Login
+Logout
+Password recovery
+MFA
+Role authorization
+Permission authorization
+Tenant isolation
+Object-level access
+Rate limiting
+Audit events
+
+Security tests must accompany implementation.
+
+=======================================================
+PHASE 13 — BACKEND BUSINESS MODULES
+=======================================================
+
+Implement one domain at a time.
+
+Suggested order:
+
+1. Student
+2. Staff
+3. Academic Structure
+4. Attendance
+5. Homework
+6. Quiz / Study Materials
+7. Exams / Marks
+8. Report Cards
+9. Finance
+10. Transport
+11. Communication
+12. Notifications
+13. Events / Consent
+14. Safety / Pickup
+15. Reports / Audit
+
+For each module:
+
+Design API
+Design database
+Implement backend
+Write tests
+Connect frontend
+Run end-to-end test
+Then move forward
+
+=======================================================
+PHASE 14 — EXTERNAL INTEGRATIONS
+=======================================================
+
+Only after core backend works:
+
+Payment Provider
+Email
+AI Provider
+Future SMS
+Future WhatsApp
+Future School Bus GPS
+Future Biometric Attendance
+
+Each integration must use secure server-side credentials.
+
+=======================================================
+PHASE 15 — TESTING
+=======================================================
+
+Implement:
+
+Unit Tests
+Integration Tests
+API Tests
+Authorization Tests
+Tenant Isolation Tests
+Payment Tests
+Security Tests
+Frontend Tests
+End-to-End Tests
+Accessibility Tests
+Responsive Tests
+
+Critical test:
+
+School A user
+attempts School B record
+→ DENIED
+
+Teacher attempts unrelated class
+→ DENIED
+
+Admin attempts Principal-only approval
+→ DENIED
+
+=======================================================
+PHASE 16 — STAGING
+=======================================================
+
+Create a staging environment.
+
+Use fictional/demo school data.
+
+Run complete workflows.
+
+Do not connect a real production school until the staging system is stable.
+
+=======================================================
+PHASE 17 — PILOT SCHOOL
+=======================================================
+
+After security/reliability validation:
+
+Pilot with one school.
+
+Begin with controlled modules.
+
+Observe:
+
+Usability
+Workflow issues
+Performance
+Security events
+Support issues
+Payment reconciliation
+Parent/Teacher feedback
+
+Make product changes based on verified requirements.
+
+=======================================================
+PHASE 18 — PRODUCTION
+=======================================================
+
+Production requirements:
+
+HTTPS
+Secure hosting
+Managed PostgreSQL
+Secrets management
+Monitoring
+Error tracking
+Backups
+Restore testing
+Security alerts
+Audit retention
+Database migrations
+CI/CD
+Deployment rollback capability
+
+=======================================================
+PHASE 19 — CLIENT TRUST
+=======================================================
+
+Before selling broadly, prepare:
+
+Architecture document
+Security architecture
+Access-control matrix
+Data lifecycle
+Backup/recovery procedure
+Incident-response procedure
+Payment architecture
+Audit design
+Privacy/security information
+Testing evidence
+
+Do not claim:
+
+"100% secure."
+
+Instead describe actual controls and testing.
+
+=======================================================
+WORKING STYLE
+=======================================================
+
+I want to work step by step.
+
+For every phase:
+
+FIRST:
+Explain what we will build.
+
+SECOND:
+Show the architecture.
+
+THIRD:
+Tell me what files/modules will be created.
+
+FOURTH:
+Implement it.
+
+FIFTH:
+Run/build/test where tools allow.
+
+SIXTH:
+Fix errors.
+
+SEVENTH:
+Give me exact manual testing steps.
+
+EIGHTH:
+Give me a checklist:
+
+DONE
+NOT DONE
+NEXT
+
+Then STOP.
+
+Do not jump to the next phase until I ask.
+
+=======================================================
+IMPORTANT AI INSTRUCTION
+=======================================================
+
+Do not rewrite my finalized business requirements merely because another architecture seems easier.
+
+If implementation requires a technical decision:
+
+Recommend the best production-oriented option.
+
+Clearly explain:
+
+- Why
+- Security impact
+- Complexity
+- Future impact
+
+Then implement only the current approved phase.
+
+=======================================================
+STARTING POINT
+=======================================================
+
+Start by reviewing the entire specification above.
+
+Do NOT immediately generate the complete application.
+
+Give me:
+
+1. Product architecture map
+2. Recommended production architecture
+3. Frontend architecture
+4. Backend architecture
+5. Database architecture approach
+6. Authentication architecture
+7. Authorization architecture
+8. Security architecture
+9. Deployment architecture
+10. Development phase sequence
+
+Then identify:
+
+CURRENT PHASE
+
+and give me only the first implementation task.
+
+My goal is not only to create a demo.
+
+My goal is to build FutureSchool step by step into a secure, production-oriented, real-world School Management SaaS application.
