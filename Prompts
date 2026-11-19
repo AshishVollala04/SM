@@ -312,3 +312,119 @@ Recommended Execution Checklist
 4.Do not let Copilot rewrite finalized requirements without an explicit new decision.
 5.Treat prototype payments, AI and authentication as simulations until the backend phase.
 6.After Phase 7, freeze frontend V1 and start API contracts/backend implementation.
+
+
+
+
+Work in the cloned FutureSchool repository at `Future_School/`.
+
+## Goal
+
+Implement reliable student roster management for the start of each academic year. School admins must be able to promote returning students, mark students who leave as exited, and add new students. Preserve historical school records and give each new student’s parent secure access.
+
+Do NOT add a public admission form, enquiry form, or application-review workflow.
+
+## First: Inspect the Existing System
+
+Before changing code, trace the current implementation for:
+- Academic-year creation and selection.
+- Student promotion and class/section assignment.
+- Adding, editing, importing, exiting, and deactivating students.
+- Year-specific fee schedules and fee charges.
+- Parent account creation, guardian linking, and parent login/activation.
+- Fee recording, parent dues and receipt history, and hall-ticket eligibility/release.
+- Related UI routes, services, backend endpoints, entities, Flyway migrations, and tests.
+
+Verify findings against the current code and tests. Do not rely on stale documentation alone. Summarize which requirements already work and which are confirmed gaps before implementing.
+
+## Required Student Roster Workflows
+
+### 1. Prepare the next academic year
+Provide an authorized school-admin workflow to prepare a new academic year and review the current roster before changes take effect.
+
+Admins should be able to:
+- Promote returning students into the next grade/class and assign their next-year section and roll number.
+- Keep a student in the same grade when repeating, when appropriate.
+- Mark students who leave, transfer, or do not return as exited/inactive.
+- Add newly joining students directly to the new academic year.
+- Review a preview of proposed changes and confirm before applying them.
+
+Do not assume every student should be promoted automatically. Require an explicit admin decision for exceptions and missing information.
+
+### 2. Preserve student history
+When a student exits or transfers:
+- Do not hard-delete the student, parent account, attendance, marks, fee records, receipts, or other historical data.
+- Keep past academic-year class assignments and records unchanged.
+- Make the student inactive/exited for the relevant school year so they do not appear in active rosters.
+- Record the exit date and reason where supported.
+
+### 3. Add students and link parents
+When an admin adds a student:
+- Capture the necessary student, guardian, class/section, roll number, and academic-year details.
+- Link the student to the correct guardian account.
+- If the guardian already has an account, link the student to it instead of creating a duplicate.
+- If a guardian account must be created, use the existing secure parent activation/sign-in flow. Do not set or expose a known default password.
+- Let a parent see only their linked child or children.
+- Clearly report missing or invalid guardian contact details that prevent parent access.
+
+### 4. Prevent duplicate or partial changes
+Promotion, enrollment, parent linking, and fee setup must be safe to retry:
+- Do not create duplicate students, class-year assignments, parent links, or fee charges.
+- Validate class, section, roll number, guardian data, and academic year before saving.
+- Apply related changes transactionally where possible. If a batch has row-level errors, report them clearly and avoid leaving inconsistent records.
+- Provide a useful result summary: promoted, added, exited, skipped, and rows needing correction.
+
+### 5. Academic-year fees
+Create or configure fee schedules and due dates for the selected academic year. Do not silently reuse hardcoded dates or charge a new-year fee against a previous year.
+
+Keep fee handling outside parent payment flows:
+- Parents can view their child’s recorded dues, paid amounts, concessions, due dates, overdue balance, and receipt history.
+- Parents can print/download receipts for collections already recorded by the school.
+- Remove parent-facing “pay now,” checkout, payment-order, mock-payment, and online payment actions.
+- Authorized school finance staff record offline collections in the app and issue official receipts.
+- Never invent payments or receipts, and clearly label demo/sample data.
+
+### 6. Hall-ticket clearance and release
+Keep fee eligibility separate from hall-ticket release:
+- Calculate fee clearance on the server from recorded charges, concessions, collections, and the exam’s configured clearance rule.
+- Authorized class teachers can view each student’s clearance status and explicitly release eligible hall tickets.
+- Recording a fee collection must not automatically release a hall ticket.
+- Parents cannot release hall tickets.
+- Preserve any existing audited Principal override, if supported.
+
+## Security, Privacy, and Audit Requirements
+
+- Enforce authorization on the backend; frontend route guards are not security controls.
+- Scope all student, parent, fee, class, and academic-year operations to the authenticated school.
+- Never trust a school ID or student/parent relationship supplied by an untrusted client.
+- Test cross-school access denial.
+- Protect student and guardian personal information. Do not expose sensitive fields unnecessarily or write them to logs.
+- Audit important admin actions, including academic-year setup, promotion, student addition, exit/transfer, guardian linking, and fee collection.
+- Use a new Flyway migration for any schema change. Do not rely on Hibernate schema updates in production.
+- Do not commit secrets, generated files, or unrelated local changes.
+
+## Implementation and Tests
+
+After the initial code map, implement the smallest complete changes needed for the confirmed gaps. Follow existing project patterns; avoid broad rewrites and unrelated UI redesigns.
+
+Add or update focused tests to verify:
+- Only authorized school admins can prepare years, promote/add/exit students, and link guardians.
+- Cross-school access is denied.
+- Promotion, enrollment, parent linking, and fee setup are idempotent.
+- Exited students retain historical records and do not appear as active students in the new year.
+- Returning students have correct next-year class/section assignments.
+- New students are linked to the correct existing or newly activated parent account.
+- Missing/invalid parent contact information is reported without exposing credentials.
+- Fees and due dates are associated with the correct academic year.
+- Parents can view only linked-child dues and recorded receipts and can download/print those receipts.
+- Parent UI has no payment or checkout action and does not create payment orders.
+- Staff-recorded fees update balances and create receipts.
+- Fee collection does not release hall tickets; only an authorized teacher can release an eligible student’s ticket.
+
+Run focused tests after each implementation slice, then relevant frontend typecheck/build and backend tests. If checks cannot run because dependencies or services are unavailable, state the exact blocker and do not claim they passed.
+
+At completion, report:
+1. What was already implemented.
+2. What you changed.
+3. Tests/checks run and their actual results.
+4. Any remaining gaps or product decisions needed.
