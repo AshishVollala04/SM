@@ -429,7 +429,7 @@ At completion, report:
 3. Tests/checks run and their actual results.
 4. Any remaining gaps or product decisions needed.
 
-
+20-11-2026------------------------------------
 Fix the requirements mismatches in the pulled Future_School code. Keep the changes limited to these issues and follow the existing project patterns.
 
 1. Make student fee viewing consistent with the offline-counter fee policy. The backend denies online payment endpoints, and the product requirements say parents settle fees at the school counter or via the school’s direct bank QR, with staff recording the payment and issuing the receipt. Update the reachable student fee screen so it does not offer simulated UPI/card checkout, mark dues paid locally, or call the old payment API. Keep fee balances and recorded receipts visible, and explain how the student/guardian can settle dues through the school. Do not remove the Admin Fee Desk flow for recording payments.
@@ -439,3 +439,27 @@ Fix the requirements mismatches in the pulled Future_School code. Keep the chang
 3. Reconcile conflicting requirements documentation. Treat the offline-counter fee policy in Product Requirements Module 4 and the current backend policy as the source of truth. Update older docs that still describe in-app Razorpay/UPI checkout, including the app flow, UI brief, payment API/schema references, security matrix, and payment feature tickets. Clearly mark online gateway payments as out of scope or deferred; do not re-enable online payments or invent a new payment flow.
 
 Run the frontend service tests and typecheck, plus the focused backend tests. Report the files changed, test results, and any remaining contradictions. Do not commit changes.
+
+Add Parent/Teacher-style quick action cards to the Principal and Admin home dashboards.
+
+Use the existing shared QuickCard component and match the current dashboard styling and responsive behavior: swipeable cards on mobile and a grid on larger screens.
+
+For the Principal, add cards linking to:
+- Report cards
+- Corrections
+- Admin requests
+- Teacher leave
+
+Show each item’s current pending count and an alert indicator when the count is greater than zero.
+
+For the Admin, add quick cards for workflows the signed-in Admin is permitted to access, such as:
+- Fee desk
+- Students
+- Academic year
+- Changes
+- Complaints
+- Transport
+
+Use existing work-queue or overview data for statuses and pending counts. Do not show cards for features the Admin lacks permission to access. Link only to existing routes; do not create duplicate workflows.
+
+Run the frontend typecheck and service tests after the change. Do not commit.
